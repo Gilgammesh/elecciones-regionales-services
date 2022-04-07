@@ -1,0 +1,81 @@
+### GENERAMOS EL TOKEN DE USUARIO ###
+# @name generate
+POST {{$dotenv HOST}}/auth/token
+Content-Type: {{$dotenv CONTENT_TYPE}}
+
+{
+    "dni": "{{$dotenv USERNAME}}",
+    "password": "{{$dotenv PASSWORD}}",
+    "expires": true,
+    "time": "1d"
+}
+
+### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
+@authToken = {{generate.response.body.token}}
+
+### OBTENEMOS TODAS LAS ACCIONES ###
+GET {{$dotenv HOST}}/admin/acciones
+    ?page=1
+    &pageSize=10
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### CREAMOS UNA ACCIÓN ###
+# @name create
+POST {{$dotenv HOST}}/admin/acciones
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "nombre": "test",
+    "descripcion": "descripcion de test"
+}
+
+### ID DE ACCIÓN ###
+@idAccion = {{create.response.body.accion._id}}
+# @idAccion = 613cdf6d4a223520f12298c2
+
+### OBTENEMOS DATOS DE UNA ACCIÓN ###
+GET {{$dotenv HOST}}/admin/acciones/{{idAccion}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### ACTUALIZAMOS DATOS DE UNA ACCIÓN ###
+PUT {{$dotenv HOST}}/admin/acciones/{{idAccion}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "nombre": "test actualizado",
+    "descripcion": "descripcion de test actualizado"
+}
+
+### ELIMINAMOS DATOS DE UNA ACCIÓN ###
+DELETE {{$dotenv HOST}}/admin/acciones/{{idAccion}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}

@@ -1,0 +1,83 @@
+### GENERAMOS EL TOKEN DE USUARIO ###
+# @name generate
+POST {{$dotenv HOST}}/auth/token
+Content-Type: {{$dotenv CONTENT_TYPE}}
+
+{
+    "dni": "{{$dotenv USERNAME}}",
+    "password": "{{$dotenv PASSWORD}}", 
+    "expires": true,
+    "time": "1d"
+}
+
+### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
+@authToken = {{generate.response.body.token}}
+
+### OBTENEMOS TODOS LOS ROLES ###
+GET {{$dotenv HOST}}/admin/roles
+    ?page=1
+    &pageSize=10
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### CREAMOS UN ROL ###
+# @name create
+POST {{$dotenv HOST}}/admin/roles
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "codigo": 1,
+    "nombre": "ROL_TEST",
+    "descripcion": "descripcion del rol"
+}
+
+### ID DE ROL ###
+@idRol = {{create.response.body.rol._id}}
+# @idRol = 5fd6e73c5791f62e30e78455
+
+### OBTENEMOS DATOS DE UN ROL ###
+GET {{$dotenv HOST}}/admin/roles/{{idRol}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### ACTUALIZAMOS DATOS DE UN ROL ###
+PUT {{$dotenv HOST}}/admin/roles/{{idRol}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "nombre": "ROL_TEST_ACTUALIZADO",
+    "descripcion": "descripcion del rol actualizado",
+    "prioridad": 1
+}
+
+### ELIMINAMOS DATOS DE UN ROL ###
+DELETE {{$dotenv HOST}}/admin/roles/{{idRol}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}

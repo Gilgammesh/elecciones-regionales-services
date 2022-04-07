@@ -1,0 +1,17 @@
+# Dependencias
+node_modules
+
+# Carpetas código compilado
+dist
+build
+
+# Archivos subidos a la Aplicación
+uploads
+uploads.rar
+uploads.zip
+
+# Variables de entorno
+.env
+
+# Configuraciones de VSCode
+.vscode

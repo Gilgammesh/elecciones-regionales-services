@@ -1,0 +1,32 @@
+### GENERAMOS EL TOKEN DE USUARIO ###
+# @name generate
+POST {{$dotenv HOST}}/auth/token
+Content-Type: {{$dotenv CONTENT_TYPE}}
+
+{
+    "dni": "{{$dotenv USERNAME}}",
+    "password": "{{$dotenv PASSWORD}}",
+    "expires": true,
+    "time": "1d"
+}
+
+### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
+@authToken = {{generate.response.body.token}}
+
+### ID DE USUARIO ###
+@idUsuario = 5ff112f1593e361f68cf2e57
+
+### ACTUALIZAMOS LA CLAVE DEL USUARIO ###
+PUT {{$dotenv HOST}}/auth/cambiar-clave
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "password": "{{$dotenv PASSWORD}}",
+    "newPassword": "{{$dotenv PASSWORD}}"
+}

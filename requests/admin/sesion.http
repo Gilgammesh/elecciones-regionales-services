@@ -1,0 +1,43 @@
+### GENERAMOS EL TOKEN DE USUARIO ###
+# @name generate
+POST {{$dotenv HOST}}/auth/token
+Content-Type: {{$dotenv CONTENT_TYPE}}
+
+{
+    "dni": "{{$dotenv USERNAME}}",
+    "password": "{{$dotenv PASSWORD}}",
+    "expires": true,
+    "time": "1d"
+}
+
+### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
+@authToken = {{generate.response.body.token}}
+
+### OBTENEMOS TODAS LAS SESIONES ###
+GET {{$dotenv HOST}}/admin/sesiones
+    ?page=1
+    &pageSize=10
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### ID DE USUARIO ###
+@idUser = 5ff112f1593e361f68asde57
+
+### ACTUALIZAMOS LOS DATOS DE UNA SESIÓN ###
+PUT {{$dotenv HOST}}/admin/sesiones
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "estado": "busy"
+}
