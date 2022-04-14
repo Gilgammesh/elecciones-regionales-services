@@ -25,9 +25,6 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### ID DE USUARIO ###
-@idUser = 5ff112f1593e361f68asde57
-
 ### ACTUALIZAMOS LOS DATOS DE UNA SESIÓN ###
 PUT {{$dotenv HOST}}/admin/sesiones
 Authorization: {{authToken}}

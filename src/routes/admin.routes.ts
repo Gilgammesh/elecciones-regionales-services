@@ -28,7 +28,7 @@ router.delete('/acciones/:id', [validarToken, validarRol], accion.remove);
 // Módulos
 router.get('/modulos', [validarToken, validarRol], modulo.getAll);
 router.get('/modulos/:id', [validarToken, validarRol], modulo.get);
-router.post('/modulos', /* [validarToken, validarRol], */ modulo.create);
+router.post('/modulos', [validarToken, validarRol], modulo.create);
 router.put('/modulos/:id', [validarToken, validarRol], modulo.update);
 router.delete('/modulos/:id', [validarToken, validarRol], modulo.remove);
 

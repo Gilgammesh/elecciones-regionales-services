@@ -2,7 +2,7 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Schema, model, Document, PopulatedDoc } from 'mongoose';
-import { IUsuario } from '../usuarios/usuario';
+import { IUsuario } from '../usuario';
 
 /*******************************************************************************************************/
 // Interface de Eventos de Logs //

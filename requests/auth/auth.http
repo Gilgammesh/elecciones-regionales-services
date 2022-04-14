@@ -43,10 +43,10 @@ Browser: {{$dotenv BROWSER}}
 }
 
 ### OBTENEMOS ID DEL USUARIO DEL LOGIN ###
-@idUser = {{login.response.body.usuario._id}}
+@id = {{login.response.body.usuario._id}}
 
 ### LOGOUT DE USUARIO ###
-POST {{$dotenv HOST}}/auth/logout/{{idUser}}
+POST {{$dotenv HOST}}/auth/logout/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}

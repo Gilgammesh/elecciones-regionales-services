@@ -66,12 +66,12 @@ export const getAll: Handler = async (req, res) => {
 		// Si es un superusuario
 		if (usuario.rol.super) {
 			list = await Rol.find({}, exclude_campos)
-				.sort({ prioridad: 'asc', nombre: 'asc' })
+				.sort({ prioridad: 'asc', codigo: 'asc', nombre: 'asc' })
 				.skip((page - 1) * pageSize)
 				.limit(pageSize);
 		} else {
 			list = await Rol.find({ super: usuario.rol.super }, exclude_campos)
-				.sort({ prioridad: 'asc', nombre: 'asc' })
+				.sort({ prioridad: 'asc', codigo: 'asc', nombre: 'asc' })
 				.skip((page - 1) * pageSize)
 				.limit(pageSize);
 		}

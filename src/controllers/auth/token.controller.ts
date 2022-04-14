@@ -2,9 +2,9 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express';
-import { verify, JwtPayload } from 'jsonwebtoken';
+import { JwtPayload } from 'jsonwebtoken';
 import { compare } from 'bcryptjs';
-import Usuario, { IUsuario } from '../../models/usuarios/usuario';
+import Usuario, { IUsuario } from '../../models/usuario';
 import { generateToken, generateTokenWithTime } from '../../helpers/jwtoken';
 import { IUsuarioResponse } from '../../middlewares/authentication';
 
@@ -17,7 +17,9 @@ export const generate: Handler = async (req, res) => {
 
 	try {
 		// Intentamos realizar la búsqueda por DNI del usuario
-		const usuario: IUsuario | null = await Usuario.findOne({ dni: body.dni }).populate('rol');
+		const usuario: IUsuario | null = await Usuario.findOne({ dni: body.dni })
+			.populate('rol')
+			.populate('departamento');
 
 		// Verificamos si el usuario existe
 		if (!usuario) {
@@ -51,19 +53,26 @@ export const generate: Handler = async (req, res) => {
 			nombres: usuario.nombres,
 			apellidos: usuario.apellidos,
 			dni: usuario.dni,
-			celular: usuario.celular,
 			genero: usuario.genero,
 			img: usuario.img,
 			rol: {
 				_id: usuario.rol._id,
-				nombre: usuario.rol.nombre,
 				super: usuario.rol.super
-			}
+			},
+			...(!usuario.rol.super && {
+				departamento: {
+					_id: usuario.departamento._id,
+					codigo: usuario.departamento.codigo,
+					nombre: usuario.departamento.nombre
+				}
+			})
 		};
 
 		// Definimos el objeto payload
 		const payload: JwtPayload = {
-			usuario: usuarioResponse
+			usuario: {
+				_id: usuario._id
+			}
 		};
 
 		// Generamos el token del usuario

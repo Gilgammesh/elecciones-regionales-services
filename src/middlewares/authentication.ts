@@ -4,7 +4,8 @@
 import { Handler } from 'express';
 import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken';
 import Rol, { IRol, IPermisosModulo, IPermisosSubmodulo } from '../models/admin/rol';
-import Usuario, { IUsuario } from '../models/usuarios/usuario';
+import Modulo, { IModulo } from '../models/admin/modulo';
+import Usuario, { IUsuario } from '../models/usuario';
 import { parseJwtDateExpire } from '../helpers/date';
 import { appSecret } from '../configs';
 
@@ -13,16 +14,19 @@ import { appSecret } from '../configs';
 /*******************************************************************************************************/
 export interface IUsuarioResponse {
 	_id: string;
-	nombres: string;
-	apellidos: string;
-	dni: string;
-	celular: string;
-	genero: string;
+	nombres?: string;
+	apellidos?: string;
+	dni?: string;
+	genero?: string;
 	img?: string;
 	rol: {
 		_id: string;
-		nombre: string;
 		super: boolean;
+	};
+	departamento?: {
+		_id: string;
+		codigo: string;
+		nombre?: string;
 	};
 }
 
@@ -53,7 +57,9 @@ export const validarToken: Handler = async (req, res, next) => {
 		// Si existe una decodificación
 		if (decoded?.usuario?._id) {
 			// Obtenemos los datos del usuario actualizados
-			const usuario: IUsuario | null = await Usuario.findById(decoded.usuario._id).populate('rol');
+			const usuario: IUsuario | null = await Usuario.findById(decoded.usuario._id)
+				.populate('rol')
+				.populate('departamento');
 
 			// Si existe el usuario
 			if (usuario) {
@@ -62,17 +68,16 @@ export const validarToken: Handler = async (req, res, next) => {
 					// Definimos los datos del usuario
 					const usuarioResponse: IUsuarioResponse = {
 						_id: usuario._id,
-						nombres: usuario.nombres,
-						apellidos: usuario.apellidos,
-						dni: usuario.dni,
-						celular: usuario.celular,
-						genero: usuario.genero,
-						img: usuario.img,
 						rol: {
 							_id: usuario.rol._id,
-							nombre: usuario.rol.nombre,
 							super: usuario.rol.super
-						}
+						},
+						...(!usuario.rol.super && {
+							departamento: {
+								_id: usuario.departamento._id,
+								codigo: usuario.departamento.codigo
+							}
+						})
 					};
 
 					// Almacenamos los datos del usuario actualizado en el request
@@ -141,6 +146,7 @@ export const validarRol: Handler = async (req, res, next) => {
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Normalizamos el originalUrl para obtenemos los dos primeros elementos (módulo y submódulo) //
 	////////////////////////////////////////////////////////////////////////////////////////////////
+
 	// Removemos el primer caracter ('/')
 	const path: string = originalUrl.substring(1);
 	// Removemos los query string, haciendo un split a "?"
@@ -178,20 +184,26 @@ export const validarRol: Handler = async (req, res, next) => {
 						error: 'Usted no cuenta con permisos para esta ruta'
 					});
 				}
-				// Si existen submódulos dentro del módulo
-				if (size >= 2) {
-					// Hacemos un recorrido por los submódulos del módulo y buscamos una coincidencia con el submódulo requerido
-					const promisesSubmodulo = permisoModulo[0].permisos
-						.filter((eleSM: IPermisosSubmodulo) => eleSM.submodulo === submodulo)
-						.map((eleSM: IPermisosSubmodulo) => eleSM);
-					const permisoSubmodulo = await Promise.all(promisesSubmodulo);
 
-					// En caso no haya coincidencia con el submódulo del módulo => no tiene autorización
-					if (permisoSubmodulo.length === 0) {
-						return res.status(403).json({
-							status: false,
-							error: 'Usted no cuenta con permisos para esta ruta'
-						});
+				// BUscamos los datos del módulo por su tag o etiqueta
+				const modulo_: IModulo | null = await Modulo.findOne({ tag: modulo });
+
+				// Si el módulo es de tipo collapse, quiere decir que el módulo tiene submódulos
+				if (modulo_ && modulo_.type === 'collapse') {
+					if (size >= 2) {
+						// Hacemos un recorrido por los submódulos del módulo y buscamos una coincidencia con el submódulo requerido
+						const promisesSubmodulo = permisoModulo[0].permisos
+							.filter((eleSM: IPermisosSubmodulo) => eleSM.submodulo === submodulo)
+							.map((eleSM: IPermisosSubmodulo) => eleSM);
+						const permisoSubmodulo = await Promise.all(promisesSubmodulo);
+
+						// En caso no haya coincidencia con el submódulo del módulo => no tiene autorización
+						if (permisoSubmodulo.length === 0) {
+							return res.status(403).json({
+								status: false,
+								error: 'Usted no cuenta con permisos para esta ruta'
+							});
+						}
 					}
 				}
 

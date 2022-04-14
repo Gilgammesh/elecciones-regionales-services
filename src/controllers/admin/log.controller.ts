@@ -3,7 +3,7 @@
 /*******************************************************************************************************/
 import { Handler } from 'express';
 import Log, { ILog } from '../../models/admin/log';
-import Usuario, { IUsuario } from '../../models/usuarios/usuario';
+import Usuario, { IUsuario } from '../../models/usuario';
 import { parseMomentDate12HDay } from '../../helpers/date';
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination';
 

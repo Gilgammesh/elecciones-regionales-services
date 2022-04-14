@@ -4,7 +4,8 @@
 import { Schema, model, Document, PopulatedDoc } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
 import validator from 'validator';
-import { IRol } from '../admin/rol';
+import { IRol } from './admin/rol';
+import { IDepartamento } from './ubigeo/departamento';
 
 /*******************************************************************************************************/
 // Interface del Modelo //
@@ -13,11 +14,13 @@ export interface IUsuario extends Document {
 	nombres: string;
 	apellidos: string;
 	dni: string;
-	celular: string;
+	celular?: string;
+	email?: string;
 	genero: string;
 	password: string;
 	img?: string;
 	rol: PopulatedDoc<IRol>;
+	departamento?: PopulatedDoc<IDepartamento>;
 	super: boolean;
 	estado: boolean;
 	createdAt: Date;
@@ -58,15 +61,8 @@ const UsuarioSchema: Schema = new Schema(
 			minLength: [8, 'El DNI debe tener 8 digitos'],
 			maxLength: [8, 'El DNI debe tener 8 digitos']
 		},
-		celular: {
-			type: String,
-			validate: {
-				validator: validator.isNumeric,
-				message: 'El celular debe tener sólo números'
-			},
-			minLength: [9, 'El celular debe tener 9 digitos'],
-			maxLength: [9, 'El celular debe tener 9 digitos']
-		},
+		celular: String,
+		email: String,
 		genero: {
 			type: String,
 			enum: { values: ['M', 'F'], message: '{VALUE}, no es un género válido. Elija entre: M | F' },
@@ -82,6 +78,10 @@ const UsuarioSchema: Schema = new Schema(
 			ref: 'AdminRol',
 			type: Schema.Types.ObjectId,
 			required: [true, 'El id del rol del usuario es requerido']
+		},
+		departamento: {
+			ref: 'UbigeoDepartamento',
+			type: Schema.Types.ObjectId
 		},
 		super: {
 			type: Boolean,

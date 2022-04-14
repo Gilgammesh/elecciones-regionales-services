@@ -4,7 +4,7 @@
 import { Handler } from 'express';
 import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken';
 import { compare } from 'bcryptjs';
-import Usuario, { IUsuario } from '../../models/usuarios/usuario';
+import Usuario, { IUsuario } from '../../models/usuario';
 import Sesion, { ISesion } from '../../models/admin/sesion';
 import Modulo, { IModulo } from '../../models/admin/modulo';
 import { generateTokenWithTime } from '../../helpers/jwtoken';
@@ -39,7 +39,9 @@ export const check: Handler = async (req, res) => {
 		// Si existe una decodificación
 		if (decoded?.usuario?._id) {
 			// Obtenemos los datos del usuario actualizados
-			const usuario: IUsuario | null = await Usuario.findById(decoded.usuario._id).populate('rol');
+			const usuario: IUsuario | null = await Usuario.findById(decoded.usuario._id)
+				.populate('rol')
+				.populate('departamento');
 
 			// Si existe el usuario
 			if (usuario) {
@@ -63,14 +65,19 @@ export const check: Handler = async (req, res) => {
 						nombres: usuario.nombres,
 						apellidos: usuario.apellidos,
 						dni: usuario.dni,
-						celular: usuario.celular,
 						genero: usuario.genero,
 						img: usuario.img,
 						rol: {
 							_id: usuario.rol._id,
-							nombre: usuario.rol.nombre,
 							super: usuario.rol.super
-						}
+						},
+						...(!usuario.rol.super && {
+							departamento: {
+								_id: usuario.departamento._id,
+								codigo: usuario.departamento.codigo,
+								nombre: usuario.departamento.nombre
+							}
+						})
 					};
 
 					// Sacamos la lista de todos los módulos
@@ -146,7 +153,9 @@ export const login: Handler = async (req, res) => {
 
 	try {
 		// Intentamos realizar la búsqueda por DNI del usuario
-		const usuario: IUsuario | null = await Usuario.findOne({ dni: body.dni }).populate('rol');
+		const usuario: IUsuario | null = await Usuario.findOne({ dni: body.dni })
+			.populate('rol')
+			.populate('departamento');
 
 		// Verificamos si el usuario existe
 		if (!usuario) {
@@ -209,19 +218,26 @@ export const login: Handler = async (req, res) => {
 			nombres: usuario.nombres,
 			apellidos: usuario.apellidos,
 			dni: usuario.dni,
-			celular: usuario.celular,
 			genero: usuario.genero,
 			img: usuario.img,
 			rol: {
 				_id: usuario.rol._id,
-				nombre: usuario.rol.nombre,
 				super: usuario.rol.super
-			}
+			},
+			...(!usuario.rol.super && {
+				departamento: {
+					_id: usuario.departamento._id,
+					codigo: usuario.departamento.codigo,
+					nombre: usuario.departamento.nombre
+				}
+			})
 		};
 
 		// Definimos el objeto payload
 		const payload: JwtPayload = {
-			usuario: usuarioResponse
+			usuario: {
+				_id: usuario._id
+			}
 		};
 
 		// Generamos el token del usuario

@@ -2,18 +2,16 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Schema, model, Document, PopulatedDoc } from 'mongoose';
-import { IUsuario } from '../usuario';
+import uniqueValidator from 'mongoose-unique-validator';
+import validator from 'validator';
 
 /*******************************************************************************************************/
 // Interface del Modelo //
 /*******************************************************************************************************/
-export interface ISesion extends Document {
-	usuario: PopulatedDoc<IUsuario>;
-	fuente: string;
-	ip: string;
-	dispositivo: string;
-	navegador: string;
-	estado: string;
+export interface IEleccion extends Document {
+	anho: number;
+	tipo: string;
+	actual: boolean;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -21,51 +19,40 @@ export interface ISesion extends Document {
 /*******************************************************************************************************/
 // Creamos el schema y definimos los nombres y tipos de datos //
 /*******************************************************************************************************/
-const SesionSchema: Schema = new Schema(
+const EleccionSchema: Schema = new Schema(
 	{
-		usuario: {
-			ref: 'Usuario',
-			type: Schema.Types.ObjectId,
-			required: [true, 'El id del usuario es requerido']
+		anho: {
+			type: Number,
+			unique: true,
+			required: [true, 'El año es requerido']
 		},
-		fuente: {
+		tipo: {
 			type: String,
 			enum: {
-				values: ['intranet', 'app'],
-				message: '{VALUE}, no es una fuente válido. Elija entre: intranet | app'
+				values: ['regionales', 'generales'],
+				message: '{VALUE}, no es un tipo de elecciones válido. Elija entre: regionales | generales'
 			},
-			required: [true, 'La fuente es requerida']
+			required: [true, 'El tipo de elecciones es requerido']
 		},
-		ip: {
-			type: String,
-			required: [true, 'El ip es requerido']
-		},
-		dispositivo: {
-			type: String,
-			required: [true, 'El dispositivo es requerido']
-		},
-		navegador: {
-			type: String,
-			required: [true, 'El navegador es requerido']
-		},
-		estado: {
-			type: String,
-			enum: {
-				values: ['online', 'busy', 'offline'],
-				message: '{VALUE}, no es un estado válido. Elija entre: online | busy | offline'
-			},
-			default: 'online',
-			required: [true, 'El estado es requerido']
+		actual: {
+			type: Boolean,
+			default: false,
+			required: true
 		}
 	},
 	{
-		collection: 'admin.sesiones',
+		collection: 'elecciones',
 		timestamps: true,
 		versionKey: false
 	}
 );
 
 /*******************************************************************************************************/
+// Validamos los campos que son únicos, con mensaje personalizado //
+/*******************************************************************************************************/
+EleccionSchema.plugin(uniqueValidator, { message: '{VALUE}, ya se encuentra registrado' });
+
+/*******************************************************************************************************/
 // Exportamos el modelo de datos //
 /*******************************************************************************************************/
-export default model<ISesion>('AdminSesion', SesionSchema);
+export default model<IEleccion>('Eleccion', EleccionSchema);

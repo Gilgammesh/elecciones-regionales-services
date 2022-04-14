@@ -2,7 +2,7 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express';
-import Usuario, { IUsuario } from '../../models/usuarios/usuario';
+import Usuario, { IUsuario } from '../../models/usuario';
 import { compare } from 'bcryptjs';
 import encrypt from '../../helpers/encrypt';
 import { saveLog } from '../admin/log.controller';

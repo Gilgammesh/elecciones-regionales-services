@@ -4,7 +4,7 @@
 import { Handler } from 'express';
 import { Error } from 'mongoose';
 import Sesion, { ISesion } from '../../models/admin/sesion';
-import Usuario, { IUsuario } from '../../models/usuarios/usuario';
+import Usuario, { IUsuario } from '../../models/usuario';
 import { parseMomentDate12HDay } from '../../helpers/date';
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination';
 
@@ -103,8 +103,7 @@ export const getAll: Handler = async (req, res) => {
 				usuario: {
 					_id: ele.usuario._id,
 					nombres: ele.usuario.nombres,
-					apellido_paterno: ele.usuario.apellido_paterno,
-					apellido_materno: ele.usuario.apellido_materno,
+					apellidos: ele.usuario.apellidos,
 					rol: {
 						_id: ele.usuario.rol._id,
 						nombre: ele.usuario.rol.nombre
@@ -196,8 +195,7 @@ export const update: Handler = async (req, res) => {
 					usuario: {
 						_id: sesionRes.usuario._id,
 						nombres: sesionRes.usuario.nombres,
-						apellido_paterno: sesionRes.usuario.apellido_paterno,
-						apellido_materno: sesionRes.usuario.apellido_materno,
+						apellidos: sesionRes.usuario.apellidos,
 						rol: {
 							_id: sesionRes.usuario.rol._id,
 							nombre: sesionRes.usuario.rol.nombre

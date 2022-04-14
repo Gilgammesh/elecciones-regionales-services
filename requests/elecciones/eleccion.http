@@ -13,8 +13,8 @@ Content-Type: {{$dotenv CONTENT_TYPE}}
 ### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
 @authToken = {{generate.response.body.token}}
 
-### OBTENEMOS TODAS LAS ACCIONES ###
-GET {{$dotenv HOST}}/admin/acciones
+### OBTENEMOS TODAS LAS ELECCIONES ###
+GET {{$dotenv HOST}}/elecciones
     ?page=1
     &pageSize=10
 Authorization: {{authToken}}
@@ -25,9 +25,9 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### CREAMOS UNA ACCIÓN ###
+### CREAMOS UNA ELECCION ###
 # @name create
-POST {{$dotenv HOST}}/admin/acciones
+POST {{$dotenv HOST}}/elecciones
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -37,16 +37,16 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "nombre": "test",
-    "descripcion": "descripcion de test"
+    "anho": 2020,
+    "tipo": "regionales",
+    "actual": true
 }
 
-### ID DE ACCIÓN ###
-@id = {{create.response.body.accion._id}}
-# @id = 613cdf6d4a223520f12298c2
+### ID DE ELECCION ###
+@id = {{create.response.body.eleccion._id}}
 
-### OBTENEMOS DATOS DE UNA ACCIÓN ###
-GET {{$dotenv HOST}}/admin/acciones/{{id}}
+### OBTENEMOS DATOS DE UNA ELECCION ###
+GET {{$dotenv HOST}}/elecciones/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -55,8 +55,8 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### ACTUALIZAMOS DATOS DE UNA ACCIÓN ###
-PUT {{$dotenv HOST}}/admin/acciones/{{id}}
+### ACTUALIZAMOS DATOS DE UNA ELECCION ###
+PUT {{$dotenv HOST}}/elecciones/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -66,12 +66,11 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "nombre": "test actualizado",
-    "descripcion": "descripcion de test actualizado"
+    "actual": false
 }
 
-### ELIMINAMOS DATOS DE UNA ACCIÓN ###
-DELETE {{$dotenv HOST}}/admin/acciones/{{id}}
+### ELIMINAMOS UNA ELECCION ###
+DELETE {{$dotenv HOST}}/elecciones/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}

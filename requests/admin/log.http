@@ -25,11 +25,11 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### ID DE USUARIO ###
-@idLog = 613ceaf2725aa986b2649d22
+### ID DE LOG ###
+@id = 613ceaf2725aa986b2649d22
 
 ### OBTENEMOS LOS DATOS DE UN LOG ###
-GET {{$dotenv HOST}}/admin/logs/{{idLog}}
+GET {{$dotenv HOST}}/admin/logs/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}

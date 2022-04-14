@@ -64,11 +64,11 @@ Browser: {{$dotenv BROWSER}}
 }
 
 ### ID DE MÓDULO ###
-@idModulo = {{create.response.body.modulo._id}}
-# @idModulo = 5fd6e73c5791f62e30e78455
+@id = {{create.response.body.modulo._id}}
+# @id = 5fd6e73c5791f62e30e78455
 
 ### OBTENEMOS DATOS DE UN MÓDULO ###
-GET {{$dotenv HOST}}/admin/modulos/{{idModulo}}
+GET {{$dotenv HOST}}/admin/modulos/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -78,7 +78,7 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 ### ACTUALIZAMOS DATOS DE UN MÓDULO ###
-PUT {{$dotenv HOST}}/admin/modulos/{{idModulo}}
+PUT {{$dotenv HOST}}/admin/modulos/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -96,7 +96,7 @@ Browser: {{$dotenv BROWSER}}
 }
 
 ### ELIMINAMOS DATOS DE UN MÓDULO ###
-DELETE {{$dotenv HOST}}/admin/modulos/{{idModulo}}
+DELETE {{$dotenv HOST}}/admin/modulos/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}

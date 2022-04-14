@@ -2,17 +2,16 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express';
-import { join } from 'path';
 import { Error } from 'mongoose';
 import { UploadedFile } from 'express-fileupload';
-import Usuario, { IUsuario } from '../../models/usuarios/usuario';
-import Rol, { IRol } from '../../models/admin/rol';
-import encrypt from '../../helpers/encrypt';
-import { getUrlFile, storeFile, removeFile } from '../../helpers/upload';
-import { saveLog } from '../admin/log.controller';
-import { parseNewDate24H_ } from '../../helpers/date';
-import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination';
-import { eventsLogs } from '../../models/admin/log';
+import Usuario, { IUsuario } from '../models/usuario';
+import Rol, { IRol } from '../models/admin/rol';
+import encrypt from '../helpers/encrypt';
+import { getUrlFile, storeFile, removeFile } from '../helpers/upload';
+import { saveLog } from './admin/log.controller';
+import { parseNewDate24H_ } from '../helpers/date';
+import { getPage, getPageSize, getTotalPages } from '../helpers/pagination';
+import { eventsLogs } from '../models/admin/log';
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
@@ -34,14 +33,30 @@ export const getAll: Handler = async (req, res) => {
 	const { usuario, query } = req;
 
 	try {
-		// Intentamos obtener el total de registros de usuarios
-		let totalRegistros: number;
+		// Definimos el query para el usuario
+		let queryUsuario = {};
+
 		// Si es un superusuario
 		if (usuario.rol.super) {
-			totalRegistros = await Usuario.countDocuments();
+			// Filtramos por el query de departamento
+			if (query.departamento && query.departamento !== 'todos') {
+				queryUsuario = { ...queryUsuario, departamento: query.departamento };
+			}
+			// Filtramos por el query de rol
+			if (query.rol && query.rol !== 'todos') {
+				queryUsuario = { ...queryUsuario, rol: query.rol };
+			}
 		} else {
-			totalRegistros = await Usuario.find({ super: usuario.rol.super }).count();
+			// Filtramos por los que no son superusuarios
+			queryUsuario = { ...queryUsuario, super: usuario.rol.super, departamento: usuario.departamento?._id };
+			// Filtramos por el departamento al que pertenece el usuario
+			if (query.rol && query.rol !== 'todos') {
+				queryUsuario = { ...queryUsuario, rol: query.rol };
+			}
 		}
+
+		// Intentamos obtener el total de registros de usuarios
+		const totalRegistros: number = await Usuario.find(queryUsuario).count();
 
 		// Obtenemos el número de registros por página y hacemos las validaciones
 		const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize);
@@ -67,21 +82,12 @@ export const getAll: Handler = async (req, res) => {
 		const page = validatePage.page;
 
 		// Intentamos realizar la búsqueda de todos los usuarios paginados
-		let list: Array<IUsuario>;
-		// Si es un superusuario
-		if (usuario.rol.super) {
-			list = await Usuario.find({}, exclude_campos)
-				.sort({ nombres: 'asc', apellidos: 'asc' })
-				.populate('rol', exclude_campos)
-				.skip((page - 1) * pageSize)
-				.limit(pageSize);
-		} else {
-			list = await Usuario.find({ super: usuario.rol.super }, exclude_campos)
-				.sort({ nombres: 'asc', apellidos: 'asc' })
-				.populate('rol', exclude_campos)
-				.skip((page - 1) * pageSize)
-				.limit(pageSize);
-		}
+		const list: Array<IUsuario> = await Usuario.find(queryUsuario, exclude_campos)
+			.sort({ nombres: 'asc', apellidos: 'asc' })
+			.populate('rol', exclude_campos)
+			.populate('departamento', exclude_campos)
+			.skip((page - 1) * pageSize)
+			.limit(pageSize);
 
 		// Retornamos la lista de usuarios
 		return res.json({
@@ -111,10 +117,11 @@ export const get: Handler = async (req, res) => {
 	const { params } = req;
 	// Obtenemos el Id del usuario
 	const { id } = params;
-
 	try {
 		// Intentamos realizar la búsqueda por id
-		const usuario: IUsuario | null = await Usuario.findById(id, exclude_campos).populate('rol', exclude_campos);
+		const usuario: IUsuario | null = await Usuario.findById(id, exclude_campos)
+			.populate('rol', exclude_campos)
+			.populate('departamento', exclude_campos);
 
 		// Retornamos los datos del usuario encontrado
 		return res.json({
@@ -137,7 +144,7 @@ export const get: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
 	// Leemos las cabeceras, el usuario, el cuerpo y los archivos de la petición
-	const { headers, usuario, body, files } = req;
+	const { headers, usuario, query, body, files } = req;
 
 	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
 	const { source, origin, ip, device, browser } = headers;
@@ -149,6 +156,8 @@ export const create: Handler = async (req, res) => {
 		if (rol) {
 			// Si el rol ingresado es de super usuario
 			if (rol.super) {
+				// Eliminamos el departamento
+				delete body.departamento;
 				// Si es un super usuario
 				if (usuario.rol.super) {
 					body.super = true;
@@ -167,6 +176,7 @@ export const create: Handler = async (req, res) => {
 
 			// Encriptamos la contraseña antes de guardarla
 			const pwdEncrypted: string | null = await encrypt(body.password);
+			// Insertamos la contraseña encriptada
 			body.password = pwdEncrypted;
 
 			// Creamos el modelo de un nuevo usuario
@@ -210,10 +220,9 @@ export const create: Handler = async (req, res) => {
 			}
 
 			// Obtenemos el usuario creado
-			const usuarioResp: IUsuario | null = await Usuario.findById(usuarioOut._id, exclude_campos).populate(
-				'rol',
-				exclude_campos
-			);
+			const usuarioResp: IUsuario | null = await Usuario.findById(usuarioOut._id, exclude_campos)
+				.populate('rol', exclude_campos)
+				.populate('departamento', exclude_campos);
 
 			// Si existe un socket
 			if (globalThis.socketIO) {
@@ -271,6 +280,15 @@ export const update: Handler = async (req, res) => {
 	try {
 		// Intentamos obtener el usuario antes que se actualice
 		const usuarioIn: IUsuario | null = await Usuario.findById(id);
+
+		// Analizamos el rol
+		const rol: IRol | null = await Rol.findById(body.rol);
+		
+		// Si existe un rol y si es de un superusuario
+		if (rol && rol.super) {
+			// Eliminamos el departamento
+			delete body.departamento;
+		}
 
 		// Si la contraseña es nula
 		if (body.password === 'null') {
@@ -347,7 +365,9 @@ export const update: Handler = async (req, res) => {
 		}
 
 		// Obtenemos el usuario actualizado
-		const usuarioResp: IUsuario | null = await Usuario.findById(id, exclude_campos).populate('rol', exclude_campos);
+		const usuarioResp: IUsuario | null = await Usuario.findById(id, exclude_campos)
+			.populate('rol', exclude_campos)
+			.populate('departamento', exclude_campos);
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
@@ -397,7 +417,9 @@ export const remove: Handler = async (req, res) => {
 
 	try {
 		// Obtenemos el usuario antes que se elimine
-		const usuarioResp: IUsuario | null = await Usuario.findById(id, exclude_campos).populate('rol', exclude_campos);
+		const usuarioResp: IUsuario | null = await Usuario.findById(id, exclude_campos)
+			.populate('rol', exclude_campos)
+			.populate('departamento', exclude_campos);
 
 		// Intentamos realizar la búsqueda por id y removemos
 		const usuarioIn: IUsuario | null = await Usuario.findByIdAndRemove(id);

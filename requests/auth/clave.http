@@ -13,9 +13,6 @@ Content-Type: {{$dotenv CONTENT_TYPE}}
 ### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
 @authToken = {{generate.response.body.token}}
 
-### ID DE USUARIO ###
-@idUsuario = 5ff112f1593e361f68cf2e57
-
 ### ACTUALIZAMOS LA CLAVE DEL USUARIO ###
 PUT {{$dotenv HOST}}/auth/cambiar-clave
 Authorization: {{authToken}}

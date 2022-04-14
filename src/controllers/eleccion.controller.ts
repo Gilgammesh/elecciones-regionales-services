@@ -3,34 +3,34 @@
 /*******************************************************************************************************/
 import { Handler } from 'express';
 import { Error } from 'mongoose';
-import Accion, { IAccion } from '../../models/admin/accion';
-import { saveLog } from './log.controller';
-import { parseNewDate24H_ } from '../../helpers/date';
-import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination';
-import { eventsLogs } from '../../models/admin/log';
+import Eleccion, { IEleccion } from '../models/eleccion';
+import { saveLog } from './admin/log.controller';
+import { parseNewDate24H_ } from '../helpers/date';
+import { getPage, getPageSize, getTotalPages } from '../helpers/pagination';
+import { eventsLogs } from '../models/admin/log';
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'admin';
-const nombre_submodulo: string = 'accion';
-const nombre_controlador: string = 'accion.controller';
-const exclude_campos: string = '-createdAt -updatedAt';
+const nombre_modulo: string = 'elecciones';
+const nombre_submodulo: string = '';
+const nombre_controlador: string = 'eleccion.controller';
+const exclude_campos = '-createdAt -updatedAt';
 const pagination = {
 	page: 1,
 	pageSize: 10
 };
 
 /*******************************************************************************************************/
-// Obtener todas las acciones //
+// Obtener todas las elecciones //
 /*******************************************************************************************************/
 export const getAll: Handler = async (req, res) => {
-	// Leemos el query de la petición
-	const { query } = req;
+	// Leemos el eleccion y el query de la petición
+	const { usuario, query } = req;
 
 	try {
-		// Intentamos obtener el total de registros de acciones
-		const totalRegistros: number = await Accion.countDocuments();
+		// Intentamos obtener el total de registros de elecciones
+		const totalRegistros: number = await Eleccion.find({}).count();
 
 		// Obtenemos el número de registros por página y hacemos las validaciones
 		const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize);
@@ -55,13 +55,13 @@ export const getAll: Handler = async (req, res) => {
 		}
 		const page = validatePage.page;
 
-		// Intentamos realizar la búsqueda de todas las acciones paginadas
-		const list = await Accion.find({}, exclude_campos)
-			.sort({ nombre: 'asc' })
+		// Intentamos realizar la búsqueda de todas las elecciones paginadas
+		const list: Array<IEleccion> = await Eleccion.find({}, exclude_campos)
+			.sort({ anho: 'asc' })
 			.skip((page - 1) * pageSize)
 			.limit(pageSize);
 
-		// Retornamos la lista de acciones
+		// Retornamos la lista de elecciones
 		return res.json({
 			status: true,
 			pagina: page,
@@ -72,60 +72,75 @@ export const getAll: Handler = async (req, res) => {
 		});
 	} catch (error) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Obteniendo las acciones', error);
+		console.log('Eleccions', 'Obteniendo la lista de elecciones', error);
 		// Retornamos
 		return res.status(404).json({
 			status: false,
-			msg: 'No se pudo obtener las acciones'
+			msg: 'No se pudo obtener los elecciones'
 		});
 	}
 };
 
 /*******************************************************************************************************/
-// Obtener datos de una acción //
+// Obtener datos de una eleccion //
 /*******************************************************************************************************/
 export const get: Handler = async (req, res) => {
 	// Leemos los parámetros de la petición
 	const { params } = req;
-	// Obtenemos el Id de la acción
+	// Obtenemos el Id de la eleccion
 	const { id } = params;
-
 	try {
 		// Intentamos realizar la búsqueda por id
-		const accion: IAccion | null = await Accion.findById(id, exclude_campos);
+		const eleccion: IEleccion | null = await Eleccion.findById(id, exclude_campos);
 
-		// Retornamos los datos de la acción encontrada
+		// Retornamos los datos de la eleccion encontrada
 		return res.json({
 			status: true,
-			accion
+			eleccion
 		});
 	} catch (error) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Obteniendo acción', id, error);
+		console.log('Admin', 'Obteniendo datos de eleccion', id, error);
 		// Retornamos
 		return res.status(404).json({
 			status: false,
-			msg: 'No se pudo obtener los datos de la acción'
+			msg: 'No se pudo obtener los datos de la eleccion'
 		});
 	}
 };
 
 /*******************************************************************************************************/
-// Crear una nueva acción //
+// Crear una nueva eleccion //
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
-	// Leemos las cabeceras, el usuario y el cuerpo de la petición
-	const { headers, usuario, body } = req;
+	// Leemos las cabeceras, el eleccion, el cuerpo y los archivos de la petición
+	const { headers, usuario, query, body, files } = req;
 
-	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del eleccion
 	const { source, origin, ip, device, browser } = headers;
 
-	// Creamos el modelo de una nueva acción
-	const newAccion: IAccion = new Accion(body);
-
 	try {
-		// Intentamos guardar la nueva acción
-		const accionOut: IAccion = await newAccion.save();
+		// Si el año es el actual
+		if (body.actual) {
+			// Cambiamos el estado de los demás a false
+			await Eleccion.updateMany({}, { actual: false });
+		} else {
+			const elecciones = await Eleccion.find({ actual: true });
+			// Si no existe ningin año como actual
+			if (elecciones.length === 0) {
+				// Retornamos
+				return res.status(400).json({
+					status: false,
+					msg: 'Debe seleccionar un año como el actual'
+				});
+			}
+		}
+
+		// Creamos el modelo de una nueva eleccion
+		const newEleccion: IEleccion = new Eleccion(body);
+
+		// Intentamos guardar la nueva eleccion
+		const eleccionOut: IEleccion = await newEleccion.save();
 
 		// Guardamos el log del evento
 		await saveLog({
@@ -139,36 +154,36 @@ export const create: Handler = async (req, res) => {
 			submodulo: nombre_submodulo,
 			controller: nombre_controlador,
 			funcion: 'create',
-			descripcion: 'Crear nueva acción',
+			descripcion: 'Crear nueva eleccion',
 			evento: eventsLogs.create,
 			data_in: '',
-			data_out: JSON.stringify(accionOut, null, 2),
+			data_out: JSON.stringify(eleccionOut, null, 2),
 			procesamiento: 'unico',
 			registros: 1,
 			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
 		});
 
-		// Obtenemos la accion creada
-		const accionResp: IAccion | null = await Accion.findById(accionOut._id, exclude_campos);
+		// Obtenemos la eleccion creada
+		const eleccionResp: IEleccion | null = await Eleccion.findById(eleccionOut._id, exclude_campos);
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
-			// Emitimos el evento => acción creada en el módulo administrador, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('admin-accion-creada');
+			// Emitimos el evento => eleccion creada en el módulo elecciones, a todos los usuarios conectados //
+			globalThis.socketIO.broadcast.emit('eleccion-creada');
 		}
 
-		// Retornamos la acción creada
+		// Retornamos la eleccion creada
 		return res.json({
 			status: true,
-			msg: 'Se creó la acción correctamente',
-			accion: accionResp
+			msg: 'Se creó la eleccion correctamente',
+			eleccion: eleccionResp
 		});
 	} catch (error: Error | any) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Crear nueva acción', error);
+		console.log('Eleccions', 'Crear nueva eleccion', error);
 
 		// Inicializamos el mensaje de error
-		let msg: string = 'No se pudo crear la acción';
+		let msg: string = 'No se pudo crear la eleccion';
 		// Si existe un error con validación de campo único
 		if (error?.errors) {
 			// Obtenemos el array de errores
@@ -186,23 +201,39 @@ export const create: Handler = async (req, res) => {
 };
 
 /*******************************************************************************************************/
-// Actualizar los datos de una acción //
+// Actualizar los datos de una eleccion //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
-	// Leemos las cabeceras, el usuario, los parámetros y el cuerpo de la petición
-	const { headers, usuario, params, body } = req;
-	// Obtenemos el Id de la acción
+	// Leemos las cabeceras, el eleccion, los parámetros, query, el cuerpo y los archivos de la petición
+	const { headers, usuario, params, query, body, files } = req;
+	// Obtenemos el Id de la eleccion
 	const { id } = params;
 
-	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del eleccion
 	const { source, origin, ip, device, browser } = headers;
 
 	try {
-		// Intentamos obtener la acción antes que se actualice
-		const accionIn: IAccion | null = await Accion.findById(id);
+		// Intentamos obtener la eleccion antes que se actualice
+		const eleccionIn: IEleccion | null = await Eleccion.findById(id);
+
+		// Si el año es el actual
+		if (body.actual) {
+			// Cambiamos el estado de los demás a false
+			await Eleccion.updateMany({}, { actual: false });
+		} else {
+			const elecciones = await Eleccion.find({ actual: true });
+			// Si existe un año como actual y es igual al que se quiere actualizar
+			if (elecciones.length === 1 && elecciones[0].anho === eleccionIn?.anho) {
+				// Retornamos
+				return res.status(400).json({
+					status: false,
+					msg: 'No puede deseleccionar el año actual'
+				});
+			}
+		}
 
 		// Intentamos realizar la búsqueda por id y actualizamos
-		const accionOut: IAccion | null = await Accion.findByIdAndUpdate(id, body, {
+		const eleccionOut = await Eleccion.findByIdAndUpdate(id, body, {
 			new: true,
 			runValidators: true,
 			context: 'query'
@@ -220,36 +251,36 @@ export const update: Handler = async (req, res) => {
 			submodulo: nombre_submodulo,
 			controller: nombre_controlador,
 			funcion: 'update',
-			descripcion: 'Actualizar una acción',
+			descripcion: 'Actualizar una eleccion',
 			evento: eventsLogs.update,
-			data_in: JSON.stringify(accionIn, null, 2),
-			data_out: JSON.stringify(accionOut, null, 2),
+			data_in: JSON.stringify(eleccionIn, null, 2),
+			data_out: JSON.stringify(eleccionOut, null, 2),
 			procesamiento: 'unico',
 			registros: 1,
 			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
 		});
 
-		// Obtenemos la accion actualizada
-		const accionResp: IAccion | null = await Accion.findById(id, exclude_campos);
+		// Obtenemos la eleccion actualizada
+		const eleccionResp: IEleccion | null = await Eleccion.findById(id, exclude_campos);
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
-			// Emitimos el evento => acción actualizada en el módulo administrador, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('admin-accion-actualizada');
+			// Emitimos el evento => eleccion actualizada en el módulo elecciones, a todos los usuarios conectados //
+			globalThis.socketIO.broadcast.emit('eleccion-actualizada');
 		}
 
-		// Retornamos la acción actualizada
+		// Retornamos la eleccion actualizada
 		return res.json({
 			status: true,
-			msg: 'Se actualizó la acción correctamente',
-			accion: accionResp
+			msg: 'Se actualizó la eleccion correctamente',
+			eleccion: eleccionResp
 		});
 	} catch (error: Error | any) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Actualizando acción', id, error);
+		console.log('Eleccions', 'Actualizando eleccion', id, error);
 
 		// Inicializamos el mensaje de error
-		let msg: string = 'No se pudo actualizar la acción';
+		let msg: string = 'No se pudo actualizar los datos de la eleccion';
 		// Si existe un error con validación de campo único
 		if (error?.errors) {
 			// Obtenemos el array de errores
@@ -267,23 +298,23 @@ export const update: Handler = async (req, res) => {
 };
 
 /*******************************************************************************************************/
-// Eliminar una acción //
+// Eliminar una eleccion //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
-	// Leemos las cabeceras, el usuario y los parámetros de la petición
-	const { headers, usuario, params } = req;
-	// Obtenemos el Id de la acción
+	// Leemos las cabeceras, el eleccion, los parámetros y el query de la petición
+	const { headers, usuario, params, query } = req;
+	// Obtenemos el Id de la eleccion
 	const { id } = params;
 
-	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del eleccion
 	const { source, origin, ip, device, browser } = headers;
 
 	try {
-		// Obtenemos la accion antes que se elimine
-		const accionResp: IAccion | null = await Accion.findById(id, exclude_campos);
+		// Obtenemos la eleccion antes que se elimine
+		const eleccionResp: IEleccion | null = await Eleccion.findById(id, exclude_campos);
 
 		// Intentamos realizar la búsqueda por id y removemos
-		const accionIn: IAccion | null = await Accion.findByIdAndRemove(id);
+		const eleccionIn: IEleccion | null = await Eleccion.findByIdAndRemove(id);
 
 		// Guardamos el log del evento
 		await saveLog({
@@ -297,9 +328,9 @@ export const remove: Handler = async (req, res) => {
 			submodulo: nombre_submodulo,
 			controller: nombre_controlador,
 			funcion: 'remove',
-			descripcion: 'Remover una acción',
+			descripcion: 'Remover una eleccion',
 			evento: eventsLogs.remove,
-			data_in: JSON.stringify(accionIn, null, 2),
+			data_in: JSON.stringify(eleccionIn, null, 2),
 			data_out: '',
 			procesamiento: 'unico',
 			registros: 1,
@@ -308,23 +339,23 @@ export const remove: Handler = async (req, res) => {
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
-			// Emitimos el evento => acción eliminada en el módulo administrador, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('admin-accion-eliminada');
+			// Emitimos el evento => eleccion eliminada en el módulo elecciones, a todos los usuarios conectados //
+			globalThis.socketIO.broadcast.emit('eleccion-eliminada');
 		}
 
-		// Retornamos la acción eliminada
+		// Retornamos la eleccion eliminada
 		return res.json({
 			status: true,
-			msg: 'Se eliminó la acción correctamente',
-			accion: accionResp
+			msg: 'Se eliminó la eleccion correctamente',
+			eleccion: eleccionResp
 		});
 	} catch (error) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Eliminando acción', id, error);
+		console.log('Eleccions', 'Eliminando eleccion', id, error);
 		// Retornamos
 		return res.status(404).json({
 			status: false,
-			msg: 'No se pudo eliminar la acción'
+			msg: 'No se pudo eliminar la eleccion'
 		});
 	}
 };

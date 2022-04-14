@@ -43,11 +43,11 @@ Browser: {{$dotenv BROWSER}}
 }
 
 ### ID DE ROL ###
-@idRol = {{create.response.body.rol._id}}
-# @idRol = 5fd6e73c5791f62e30e78455
+@id = {{create.response.body.rol._id}}
+# @id = 5fd6e73c5791f62e30e78455
 
 ### OBTENEMOS DATOS DE UN ROL ###
-GET {{$dotenv HOST}}/admin/roles/{{idRol}}
+GET {{$dotenv HOST}}/admin/roles/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -57,7 +57,7 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 ### ACTUALIZAMOS DATOS DE UN ROL ###
-PUT {{$dotenv HOST}}/admin/roles/{{idRol}}
+PUT {{$dotenv HOST}}/admin/roles/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -73,7 +73,7 @@ Browser: {{$dotenv BROWSER}}
 }
 
 ### ELIMINAMOS DATOS DE UN ROL ###
-DELETE {{$dotenv HOST}}/admin/roles/{{idRol}}
+DELETE {{$dotenv HOST}}/admin/roles/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}

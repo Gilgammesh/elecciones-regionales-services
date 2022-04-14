@@ -3,8 +3,8 @@
 /*******************************************************************************************************/
 import { Handler } from 'express';
 import { Error } from 'mongoose';
-import Accion, { IAccion } from '../../models/admin/accion';
-import { saveLog } from './log.controller';
+import Distrito, { IDistrito } from '../../models/ubigeo/distrito';
+import { saveLog } from '../admin/log.controller';
 import { parseNewDate24H_ } from '../../helpers/date';
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination';
 import { eventsLogs } from '../../models/admin/log';
@@ -12,9 +12,9 @@ import { eventsLogs } from '../../models/admin/log';
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'admin';
-const nombre_submodulo: string = 'accion';
-const nombre_controlador: string = 'accion.controller';
+const nombre_modulo: string = 'ubigeo';
+const nombre_submodulo: string = 'distrito';
+const nombre_controlador: string = 'distrito.controller';
 const exclude_campos: string = '-createdAt -updatedAt';
 const pagination = {
 	page: 1,
@@ -22,15 +22,26 @@ const pagination = {
 };
 
 /*******************************************************************************************************/
-// Obtener todas las acciones //
+// Obtener todos los distritos //
 /*******************************************************************************************************/
 export const getAll: Handler = async (req, res) => {
 	// Leemos el query de la petición
 	const { query } = req;
 
 	try {
-		// Intentamos obtener el total de registros de acciones
-		const totalRegistros: number = await Accion.countDocuments();
+		// Definimos el query para el distrito
+		let queryDistrito = {};
+		// Si existe un query por departamento
+		if (query.departamento && query.departamento !== '') {
+			queryDistrito = { ...queryDistrito, departamento: query.departamento };
+		}
+		// Si existe un query por provincia
+		if (query.provincia && query.provincia !== '') {
+			queryDistrito = { ...queryDistrito, provincia: query.provincia };
+		}
+
+		// Intentamos obtener el total de registros de distritos de una provincia y departamento
+		const totalRegistros: number = await Distrito.find(queryDistrito).count();
 
 		// Obtenemos el número de registros por página y hacemos las validaciones
 		const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize);
@@ -55,13 +66,14 @@ export const getAll: Handler = async (req, res) => {
 		}
 		const page = validatePage.page;
 
-		// Intentamos realizar la búsqueda de todas las acciones paginadas
-		const list = await Accion.find({}, exclude_campos)
-			.sort({ nombre: 'asc' })
+		// Intentamos realizar la búsqueda de todos los distritos de una provincia y departamento paginados
+		const list = await Distrito.find(queryDistrito, exclude_campos)
+			.sort({ ubigeo: 'asc' })
+			.collation({ locale: 'es', numericOrdering: true })
 			.skip((page - 1) * pageSize)
 			.limit(pageSize);
 
-		// Retornamos la lista de acciones
+		// Retornamos la lista de distritos
 		return res.json({
 			status: true,
 			pagina: page,
@@ -72,46 +84,46 @@ export const getAll: Handler = async (req, res) => {
 		});
 	} catch (error) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Obteniendo las acciones', error);
+		console.log('Ubigeo', 'Obteniendo los distritos', error);
 		// Retornamos
 		return res.status(404).json({
 			status: false,
-			msg: 'No se pudo obtener las acciones'
+			msg: 'No se pudo obtener los distritos'
 		});
 	}
 };
 
 /*******************************************************************************************************/
-// Obtener datos de una acción //
+// Obtener datos de un distrito //
 /*******************************************************************************************************/
 export const get: Handler = async (req, res) => {
 	// Leemos los parámetros de la petición
 	const { params } = req;
-	// Obtenemos el Id de la acción
+	// Obtenemos el Id del distrito
 	const { id } = params;
 
 	try {
 		// Intentamos realizar la búsqueda por id
-		const accion: IAccion | null = await Accion.findById(id, exclude_campos);
+		const distrito: IDistrito | null = await Distrito.findById(id, exclude_campos);
 
-		// Retornamos los datos de la acción encontrada
+		// Retornamos los datos del distrito encontrado
 		return res.json({
 			status: true,
-			accion
+			distrito
 		});
 	} catch (error) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Obteniendo acción', id, error);
+		console.log('Ubigeo', 'Obteniendo distrito', id, error);
 		// Retornamos
 		return res.status(404).json({
 			status: false,
-			msg: 'No se pudo obtener los datos de la acción'
+			msg: 'No se pudo obtener los datos del distrito'
 		});
 	}
 };
 
 /*******************************************************************************************************/
-// Crear una nueva acción //
+// Crear un nuevo distrito //
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
 	// Leemos las cabeceras, el usuario y el cuerpo de la petición
@@ -120,12 +132,15 @@ export const create: Handler = async (req, res) => {
 	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
 	const { source, origin, ip, device, browser } = headers;
 
-	// Creamos el modelo de una nueva acción
-	const newAccion: IAccion = new Accion(body);
-
 	try {
-		// Intentamos guardar la nueva acción
-		const accionOut: IAccion = await newAccion.save();
+		// Creamos el ubigeo
+		body.ubigeo = `${body.departamento}${body.provincia}${body.codigo}`;
+
+		// Creamos el modelo de un nuevo distrito
+		const newDistrito: IDistrito = new Distrito(body);
+
+		// Intentamos guardar el nuevo distrito
+		const distritoOut: IDistrito = await newDistrito.save();
 
 		// Guardamos el log del evento
 		await saveLog({
@@ -139,36 +154,36 @@ export const create: Handler = async (req, res) => {
 			submodulo: nombre_submodulo,
 			controller: nombre_controlador,
 			funcion: 'create',
-			descripcion: 'Crear nueva acción',
+			descripcion: 'Crear nuevo distrito',
 			evento: eventsLogs.create,
 			data_in: '',
-			data_out: JSON.stringify(accionOut, null, 2),
+			data_out: JSON.stringify(distritoOut, null, 2),
 			procesamiento: 'unico',
 			registros: 1,
 			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
 		});
 
-		// Obtenemos la accion creada
-		const accionResp: IAccion | null = await Accion.findById(accionOut._id, exclude_campos);
+		// Obtenemos el distrito creado
+		const distritoResp: IDistrito | null = await Distrito.findById(distritoOut._id, exclude_campos);
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
-			// Emitimos el evento => acción creada en el módulo administrador, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('admin-accion-creada');
+			// Emitimos el evento => distrito creado en el módulo ubigeo, a todos los usuarios conectados //
+			globalThis.socketIO.broadcast.emit('ubigeo-distrito-creado');
 		}
 
-		// Retornamos la acción creada
+		// Retornamos el distrito creado
 		return res.json({
 			status: true,
-			msg: 'Se creó la acción correctamente',
-			accion: accionResp
+			msg: 'Se creó el distrito correctamente',
+			distrito: distritoResp
 		});
 	} catch (error: Error | any) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Crear nueva acción', error);
+		console.log('Ubigeo', 'Crear nuevo distrito', error);
 
 		// Inicializamos el mensaje de error
-		let msg: string = 'No se pudo crear la acción';
+		let msg: string = 'No se pudo crear el distrito';
 		// Si existe un error con validación de campo único
 		if (error?.errors) {
 			// Obtenemos el array de errores
@@ -186,23 +201,26 @@ export const create: Handler = async (req, res) => {
 };
 
 /*******************************************************************************************************/
-// Actualizar los datos de una acción //
+// Actualizar los datos de un distrito //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
 	// Leemos las cabeceras, el usuario, los parámetros y el cuerpo de la petición
 	const { headers, usuario, params, body } = req;
-	// Obtenemos el Id de la acción
+	// Obtenemos el Id del distrito
 	const { id } = params;
 
 	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
 	const { source, origin, ip, device, browser } = headers;
 
 	try {
-		// Intentamos obtener la acción antes que se actualice
-		const accionIn: IAccion | null = await Accion.findById(id);
+		// Intentamos obtener el distrito antes que se actualice
+		const distritoIn: IDistrito | null = await Distrito.findById(id);
+
+		// Creamos el ubigeo
+		body.ubigeo = `${body.departamento}${body.provincia}${body.codigo}`;
 
 		// Intentamos realizar la búsqueda por id y actualizamos
-		const accionOut: IAccion | null = await Accion.findByIdAndUpdate(id, body, {
+		const distritoOut: IDistrito | null = await Distrito.findByIdAndUpdate(id, body, {
 			new: true,
 			runValidators: true,
 			context: 'query'
@@ -220,36 +238,36 @@ export const update: Handler = async (req, res) => {
 			submodulo: nombre_submodulo,
 			controller: nombre_controlador,
 			funcion: 'update',
-			descripcion: 'Actualizar una acción',
+			descripcion: 'Actualizar un distrito',
 			evento: eventsLogs.update,
-			data_in: JSON.stringify(accionIn, null, 2),
-			data_out: JSON.stringify(accionOut, null, 2),
+			data_in: JSON.stringify(distritoIn, null, 2),
+			data_out: JSON.stringify(distritoOut, null, 2),
 			procesamiento: 'unico',
 			registros: 1,
 			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
 		});
 
-		// Obtenemos la accion actualizada
-		const accionResp: IAccion | null = await Accion.findById(id, exclude_campos);
+		// Obtenemos el distrito actualizado
+		const distritoResp: IDistrito | null = await Distrito.findById(id, exclude_campos);
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
-			// Emitimos el evento => acción actualizada en el módulo administrador, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('admin-accion-actualizada');
+			// Emitimos el evento => distrito actualizado en el módulo ubigeo, a todos los usuarios conectados //
+			globalThis.socketIO.broadcast.emit('ubigeo-distrito-actualizado');
 		}
 
-		// Retornamos la acción actualizada
+		// Retornamos el distrito actualizado
 		return res.json({
 			status: true,
-			msg: 'Se actualizó la acción correctamente',
-			accion: accionResp
+			msg: 'Se actualizó el distrito correctamente',
+			distrito: distritoResp
 		});
 	} catch (error: Error | any) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Actualizando acción', id, error);
+		console.log('Ubigeo', 'Actualizando distrito', id, error);
 
 		// Inicializamos el mensaje de error
-		let msg: string = 'No se pudo actualizar la acción';
+		let msg: string = 'No se pudo actualizar el distrito';
 		// Si existe un error con validación de campo único
 		if (error?.errors) {
 			// Obtenemos el array de errores
@@ -267,23 +285,23 @@ export const update: Handler = async (req, res) => {
 };
 
 /*******************************************************************************************************/
-// Eliminar una acción //
+// Eliminar un distrito //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
 	// Leemos las cabeceras, el usuario y los parámetros de la petición
 	const { headers, usuario, params } = req;
-	// Obtenemos el Id de la acción
+	// Obtenemos el Id del distrito
 	const { id } = params;
 
 	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
 	const { source, origin, ip, device, browser } = headers;
 
 	try {
-		// Obtenemos la accion antes que se elimine
-		const accionResp: IAccion | null = await Accion.findById(id, exclude_campos);
+		// Obtenemos el distrito antes que se elimine
+		const distritoResp: IDistrito | null = await Distrito.findById(id, exclude_campos);
 
 		// Intentamos realizar la búsqueda por id y removemos
-		const accionIn: IAccion | null = await Accion.findByIdAndRemove(id);
+		const distritoIn: IDistrito | null = await Distrito.findByIdAndRemove(id);
 
 		// Guardamos el log del evento
 		await saveLog({
@@ -297,9 +315,9 @@ export const remove: Handler = async (req, res) => {
 			submodulo: nombre_submodulo,
 			controller: nombre_controlador,
 			funcion: 'remove',
-			descripcion: 'Remover una acción',
+			descripcion: 'Remover un distrito',
 			evento: eventsLogs.remove,
-			data_in: JSON.stringify(accionIn, null, 2),
+			data_in: JSON.stringify(distritoIn, null, 2),
 			data_out: '',
 			procesamiento: 'unico',
 			registros: 1,
@@ -308,23 +326,23 @@ export const remove: Handler = async (req, res) => {
 
 		// Si existe un socket
 		if (globalThis.socketIO) {
-			// Emitimos el evento => acción eliminada en el módulo administrador, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('admin-accion-eliminada');
+			// Emitimos el evento => distrito eliminado en el módulo ubigeo, a todos los usuarios conectados //
+			globalThis.socketIO.broadcast.emit('ubigeo-distrito-eliminado');
 		}
 
-		// Retornamos la acción eliminada
+		// Retornamos el distrito eliminado
 		return res.json({
 			status: true,
-			msg: 'Se eliminó la acción correctamente',
-			accion: accionResp
+			msg: 'Se eliminó el distrito correctamente',
+			distrito: distritoResp
 		});
 	} catch (error) {
 		// Mostramos el error en consola
-		console.log('Admin', 'Eliminando acción', id, error);
+		console.log('Ubigeo', 'Eliminando distrito', id, error);
 		// Retornamos
 		return res.status(404).json({
 			status: false,
-			msg: 'No se pudo eliminar la acción'
+			msg: 'No se pudo eliminar el distrito'
 		});
 	}
 };

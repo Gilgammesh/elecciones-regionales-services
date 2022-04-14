@@ -13,8 +13,8 @@ Content-Type: {{$dotenv CONTENT_TYPE}}
 ### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
 @authToken = {{generate.response.body.token}}
 
-### OBTENEMOS TODAS LAS ACCIONES ###
-GET {{$dotenv HOST}}/admin/acciones
+### OBTENEMOS TODOS LOS DISTRITOS ###
+GET {{$dotenv HOST}}/ubigeo/distritos
     ?page=1
     &pageSize=10
 Authorization: {{authToken}}
@@ -25,9 +25,9 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### CREAMOS UNA ACCIÓN ###
+### CREAMOS UN DISTRITO ###
 # @name create
-POST {{$dotenv HOST}}/admin/acciones
+POST {{$dotenv HOST}}/ubigeo/distritos
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -37,16 +37,17 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "nombre": "test",
-    "descripcion": "descripcion de test"
+    "codigo": "01",
+    "nombre": "SAN MARTIN",
+    "provincia": "01",
+    "departamento": "22"
 }
 
-### ID DE ACCIÓN ###
-@id = {{create.response.body.accion._id}}
-# @id = 613cdf6d4a223520f12298c2
+### ID DE DISTRITO ###
+@id = {{create.response.body.distrito._id}}
 
-### OBTENEMOS DATOS DE UNA ACCIÓN ###
-GET {{$dotenv HOST}}/admin/acciones/{{id}}
+### OBTENEMOS DATOS DE UN DISTRITO ###
+GET {{$dotenv HOST}}/ubigeo/distritos/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -55,8 +56,8 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### ACTUALIZAMOS DATOS DE UNA ACCIÓN ###
-PUT {{$dotenv HOST}}/admin/acciones/{{id}}
+### ACTUALIZAMOS DATOS DE UN DISTRITO ###
+PUT {{$dotenv HOST}}/ubigeo/distritos/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -66,12 +67,14 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "nombre": "test actualizado",
-    "descripcion": "descripcion de test actualizado"
+    "codigo": "01",
+    "nombre": "SAN MARTIN ACTUALIZADO",
+    "provincia": "01",
+    "departamento": "22"
 }
 
-### ELIMINAMOS DATOS DE UNA ACCIÓN ###
-DELETE {{$dotenv HOST}}/admin/acciones/{{id}}
+### ELIMINAMOS UN DISTRITO ###
+DELETE {{$dotenv HOST}}/ubigeo/distritos/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}

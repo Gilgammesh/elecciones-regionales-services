@@ -13,8 +13,8 @@ Content-Type: {{$dotenv CONTENT_TYPE}}
 ### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
 @authToken = {{generate.response.body.token}}
 
-### OBTENEMOS TODAS LAS ACCIONES ###
-GET {{$dotenv HOST}}/admin/acciones
+### OBTENEMOS TODAS LAS PROVINCIAS ###
+GET {{$dotenv HOST}}/ubigeo/provincias
     ?page=1
     &pageSize=10
 Authorization: {{authToken}}
@@ -25,9 +25,9 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### CREAMOS UNA ACCIÓN ###
+### CREAMOS UNA PROVINCIA ###
 # @name create
-POST {{$dotenv HOST}}/admin/acciones
+POST {{$dotenv HOST}}/ubigeo/provincias
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -37,16 +37,16 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "nombre": "test",
-    "descripcion": "descripcion de test"
+    "codigo": "01",
+    "nombre": "SAN MARTIN",
+    "departamento": "22",
 }
 
-### ID DE ACCIÓN ###
-@id = {{create.response.body.accion._id}}
-# @id = 613cdf6d4a223520f12298c2
+### ID DE PROVINCIA ###
+@id = {{create.response.body.provincia._id}}
 
-### OBTENEMOS DATOS DE UNA ACCIÓN ###
-GET {{$dotenv HOST}}/admin/acciones/{{id}}
+### OBTENEMOS DATOS DE UNA PROVINCIA ###
+GET {{$dotenv HOST}}/ubigeo/provincias/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -55,8 +55,8 @@ Ip: {{$dotenv IP}}
 Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
-### ACTUALIZAMOS DATOS DE UNA ACCIÓN ###
-PUT {{$dotenv HOST}}/admin/acciones/{{id}}
+### ACTUALIZAMOS DATOS DE UNA PROVINCIA ###
+PUT {{$dotenv HOST}}/ubigeo/provincias/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
@@ -66,12 +66,13 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "nombre": "test actualizado",
-    "descripcion": "descripcion de test actualizado"
+    "codigo": "01",
+    "nombre": "SAN MARTIN ACTUALIZADO",
+    "departamento": "22",
 }
 
-### ELIMINAMOS DATOS DE UNA ACCIÓN ###
-DELETE {{$dotenv HOST}}/admin/acciones/{{id}}
+### ELIMINAMOS UNA PROVINCIA ###
+DELETE {{$dotenv HOST}}/ubigeo/provincias/{{id}}
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
 Source: {{$dotenv SOURCE}}
