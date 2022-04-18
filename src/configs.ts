@@ -19,9 +19,6 @@ export const appDescripcion: string = process.env.APP_ELEC_DESCRIPTION || ''; //
 export const appPort: number = parseInt(process.env.APP_ELEC_PORT as string, 10) || 3000; // Puerto de la aplicación
 export const appSecret: string = process.env.APP_ELEC_SECRET_TEXT || ''; // Texto secreto de la aplicación
 export const appAutorName: string = process.env.APP_ELEC_AUTHOR_NAME || ''; // Nombre o Compañia Autor de la aplicación
-export const appAutorDev: string = process.env.APP_ELEC_AUTHOR_DEV_NAME || ''; // Desarrollador de la aplicación
-export const appAutorEmail: string = process.env.APP_ELEC_AUTHOR_EMAIL || ''; // Correo del Autor de la aplicación
-export const appAutorWeb: string = process.env.APP_ELEC_AUTHOR_WEB || ''; // Web del Autor de la aplicación
 
 /*******************************************************************************************************/
 // Variables de la Base de Datos MongoDB //
