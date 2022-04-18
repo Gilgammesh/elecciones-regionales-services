@@ -7,6 +7,7 @@ import { compare } from 'bcryptjs';
 import Usuario, { IUsuario } from '../../models/usuario';
 import Sesion, { ISesion } from '../../models/admin/sesion';
 import Modulo, { IModulo } from '../../models/admin/modulo';
+import Eleccion, { IEleccion } from '../../models/eleccion';
 import { generateTokenWithTime } from '../../helpers/jwtoken';
 import { tokenTime, appSecret } from '../../configs';
 import { parseJwtDateExpire } from '../../helpers/date';
@@ -47,6 +48,9 @@ export const check: Handler = async (req, res) => {
 			if (usuario) {
 				// Si el usuario está activo
 				if (usuario.estado) {
+					// Obtenemos los datos de las elecciones actuales
+					const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true });
+
 					// Actualizamos la sesión del usuario
 					await Sesion.findOneAndUpdate(
 						{ usuario: usuario._id, fuente: <string>source },
@@ -77,7 +81,8 @@ export const check: Handler = async (req, res) => {
 								codigo: usuario.departamento.codigo,
 								nombre: usuario.departamento.nombre
 							}
-						})
+						}),
+						...(eleccion && { anho: eleccion.anho })
 					};
 
 					// Sacamos la lista de todos los módulos
@@ -183,6 +188,9 @@ export const login: Handler = async (req, res) => {
 			});
 		}
 
+		// Obtenemos los datos de las elecciones actuales
+		const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true });
+
 		// Realizamos la búsqueda en sesión con el id del usuario
 		const sesion: ISesion | null = await Sesion.findOne({ usuario: usuario._id, fuente: <string>source });
 		// Si existe una sesíon
@@ -230,7 +238,8 @@ export const login: Handler = async (req, res) => {
 					codigo: usuario.departamento.codigo,
 					nombre: usuario.departamento.nombre
 				}
-			})
+			}),
+			...(eleccion && { anho: eleccion.anho })
 		};
 
 		// Definimos el objeto payload

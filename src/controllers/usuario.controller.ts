@@ -172,6 +172,10 @@ export const create: Handler = async (req, res) => {
 			// En caso no sea un rol de super usuario
 			else {
 				body.super = false;
+				// Si el rol es de personero
+				if (rol.codigo === 2) {
+					body.anho = usuario.anho;
+				}
 			}
 
 			// Encriptamos la contraseña antes de guardarla
@@ -283,7 +287,7 @@ export const update: Handler = async (req, res) => {
 
 		// Analizamos el rol
 		const rol: IRol | null = await Rol.findById(body.rol);
-		
+
 		// Si existe un rol y si es de un superusuario
 		if (rol && rol.super) {
 			// Eliminamos el departamento

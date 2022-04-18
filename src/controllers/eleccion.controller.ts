@@ -313,6 +313,16 @@ export const remove: Handler = async (req, res) => {
 		// Obtenemos la eleccion antes que se elimine
 		const eleccionResp: IEleccion | null = await Eleccion.findById(id, exclude_campos);
 
+		const elecciones = await Eleccion.find({ actual: true });
+		// Si existe un año como actual y es igual al que se quiere actualizar
+		if (elecciones.length === 1 && elecciones[0].anho === eleccionResp?.anho) {
+			// Retornamos
+			return res.status(400).json({
+				status: false,
+				msg: 'No puede eliminar el año actual'
+			});
+		}
+
 		// Intentamos realizar la búsqueda por id y removemos
 		const eleccionIn: IEleccion | null = await Eleccion.findByIdAndRemove(id);
 

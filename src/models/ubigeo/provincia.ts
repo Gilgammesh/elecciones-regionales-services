@@ -22,7 +22,7 @@ export interface IProvincia extends Document {
 /*******************************************************************************************************/
 const ProvinciaSchema: Schema = new Schema(
 	{
-		ubigoe: {
+		ubigeo: {
 			type: String,
 			unique: true,
 			required: [true, 'El ubigeo es requerido'],

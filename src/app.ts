@@ -1,7 +1,7 @@
 /*******************************************************************************************************/
 // Importamos las dependencias //
 /*******************************************************************************************************/
-import express, { json, urlencoded, Request, Response } from 'express';
+import express, { json, urlencoded } from 'express';
 import cors from 'cors';
 import logger from 'morgan';
 import helmet from 'helmet';
@@ -9,9 +9,7 @@ import fileUpload from 'express-fileupload';
 import { join } from 'path';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
-import swaggerUi from 'swagger-ui-express';
-import { corsOptions, appEnvironment } from './configs';
-import { options as swaggerOptions } from './swagger/setup';
+import { corsOptions } from './configs';
 import routes from './routes';
 
 /*******************************************************************************************************/
@@ -49,26 +47,6 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')));
 // Rutas de la aplicación //
 /*******************************************************************************************************/
 routes.map(route => app.use(route.path, route.router));
-
-/*******************************************************************************************************/
-// Documentación de las Rutas - Swagger UI (Recomendado sólo en Desarrollo) //
-/*******************************************************************************************************/
-if (appEnvironment === 'development') {
-	// Ruta General
-	const swaggerHtml = swaggerUi.generateHTML(swaggerOptions);
-	app.use(`/docs`, swaggerUi.serveFiles(swaggerOptions));
-	app.get(`/docs`, (req: Request, res: Response) => {
-		res.send(swaggerHtml);
-	});
-	// Rutas por Esquemas
-	routes.map(route => {
-		const swaggerHtmlRoute = swaggerUi.generateHTML(route.swaggerOptions);
-		app.use(`/docs${route.path}`, swaggerUi.serveFiles(route.swaggerOptions));
-		app.get(`/docs${route.path}`, (req: Request, res: Response) => {
-			res.send(swaggerHtmlRoute);
-		});
-	});
-}
 
 /*******************************************************************************************************/
 // Exportamos la variable de aplicación express por defecto //

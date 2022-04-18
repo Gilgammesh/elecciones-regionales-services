@@ -5,6 +5,7 @@ import { Handler } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
 import { compare } from 'bcryptjs';
 import Usuario, { IUsuario } from '../../models/usuario';
+import Eleccion, { IEleccion } from '../../models/eleccion';
 import { generateToken, generateTokenWithTime } from '../../helpers/jwtoken';
 import { IUsuarioResponse } from '../../middlewares/authentication';
 
@@ -47,6 +48,9 @@ export const generate: Handler = async (req, res) => {
 			});
 		}
 
+		// Obtenemos los datos de las elecciones actuales
+		const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true });
+
 		// Definimos los datos del usuario enviados en la respuesta
 		const usuarioResponse: IUsuarioResponse = {
 			_id: usuario._id,
@@ -65,7 +69,8 @@ export const generate: Handler = async (req, res) => {
 					codigo: usuario.departamento.codigo,
 					nombre: usuario.departamento.nombre
 				}
-			})
+			}),
+			...(eleccion && { anho: eleccion.anho })
 		};
 
 		// Definimos el objeto payload

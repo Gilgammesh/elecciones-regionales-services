@@ -21,6 +21,7 @@ export interface IUsuario extends Document {
 	img?: string;
 	rol: PopulatedDoc<IRol>;
 	departamento?: PopulatedDoc<IDepartamento>;
+	anho?: number;
 	super: boolean;
 	estado: boolean;
 	createdAt: Date;
@@ -83,6 +84,7 @@ const UsuarioSchema: Schema = new Schema(
 			ref: 'UbigeoDepartamento',
 			type: Schema.Types.ObjectId
 		},
+		anho: Number,
 		super: {
 			type: Boolean,
 			default: false,

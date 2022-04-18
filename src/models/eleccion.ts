@@ -29,8 +29,8 @@ const EleccionSchema: Schema = new Schema(
 		tipo: {
 			type: String,
 			enum: {
-				values: ['regionales', 'generales'],
-				message: '{VALUE}, no es un tipo de elecciones válido. Elija entre: regionales | generales'
+				values: ['regional', 'general'],
+				message: '{VALUE}, no es un tipo de elecciones válido. Elija entre: regional | general'
 			},
 			required: [true, 'El tipo de elecciones es requerido']
 		},

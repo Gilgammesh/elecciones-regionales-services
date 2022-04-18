@@ -23,7 +23,7 @@ export interface IDistrito extends Document {
 /*******************************************************************************************************/
 const DistritoSchema: Schema = new Schema(
 	{
-		ubigoe: {
+		ubigeo: {
 			type: String,
 			unique: true,
 			required: [true, 'El ubigeo es requerido'],

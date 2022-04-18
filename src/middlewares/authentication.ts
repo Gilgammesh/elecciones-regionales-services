@@ -6,6 +6,7 @@ import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken';
 import Rol, { IRol, IPermisosModulo, IPermisosSubmodulo } from '../models/admin/rol';
 import Modulo, { IModulo } from '../models/admin/modulo';
 import Usuario, { IUsuario } from '../models/usuario';
+import Eleccion, { IEleccion } from '../models/eleccion';
 import { parseJwtDateExpire } from '../helpers/date';
 import { appSecret } from '../configs';
 
@@ -28,6 +29,7 @@ export interface IUsuarioResponse {
 		codigo: string;
 		nombre?: string;
 	};
+	anho?: number;
 }
 
 /*******************************************************************************************************/
@@ -65,6 +67,9 @@ export const validarToken: Handler = async (req, res, next) => {
 			if (usuario) {
 				// Si el usuario está activo
 				if (usuario.estado) {
+					// Obtenemos los datos de las elecciones actuales
+					const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true });
+
 					// Definimos los datos del usuario
 					const usuarioResponse: IUsuarioResponse = {
 						_id: usuario._id,
@@ -77,7 +82,8 @@ export const validarToken: Handler = async (req, res, next) => {
 								_id: usuario.departamento._id,
 								codigo: usuario.departamento.codigo
 							}
-						})
+						}),
+						...(eleccion && { anho: eleccion.anho })
 					};
 
 					// Almacenamos los datos del usuario actualizado en el request
@@ -143,9 +149,8 @@ export const validarRol: Handler = async (req, res, next) => {
 	// Obtenemos el Id del Rol del usuario
 	const id: string = usuario.rol._id;
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Normalizamos el originalUrl para obtenemos los dos primeros elementos (módulo y submódulo) //
-	////////////////////////////////////////////////////////////////////////////////////////////////
+	// ========================================================================================== //
 
 	// Removemos el primer caracter ('/')
 	const path: string = originalUrl.substring(1);

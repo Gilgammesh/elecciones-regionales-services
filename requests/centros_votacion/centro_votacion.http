@@ -1,0 +1,107 @@
+### GENERAMOS EL TOKEN DE USUARIO ###
+# @name generate
+POST {{$dotenv HOST}}/auth/token
+Content-Type: {{$dotenv CONTENT_TYPE}}
+
+{
+    "dni": "{{$dotenv USERNAME}}",
+    "password": "{{$dotenv PASSWORD}}",
+    "expires": true,
+    "time": "1d"
+}
+
+### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
+@authToken = {{generate.response.body.token}}
+
+### OBTENEMOS TODOS LOS CENTROS Y MESAS DE VOTACIÓ ###
+GET {{$dotenv HOST}}/centros-votacion
+    ?page=1
+    &pageSize=10
+    &departamento=todos
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### CREAMOS UN CENTRO DE VOTACIÓN ###
+# @name create
+POST {{$dotenv HOST}}/centros-votacion
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+	"departamento": "624ff04e1ef45c3d788a036a",
+	"provincia": "624ff0fe1ef45c3d788a041d",
+	"distrito": "624ff13b1ef45c3d788a0b28",
+	"nombre": "IE 00474 GERMAN TEJADA VELA",
+	"mesa": "071073",
+	"votantes": 244
+}
+
+### ID DE CENTRO DE VOTACIÓN ###
+@id = {{create.response.body.centro_votacion._id}}
+
+### OBTENEMOS DATOS DE UN CENTRO DE VOTACIÓN ###
+GET {{$dotenv HOST}}/centros-votacion/{{id}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+### ACTUALIZAMOS DATOS DE UN CENTRO DE VOTACIÓN ###
+PUT {{$dotenv HOST}}/centros-votacion/{{id}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+{
+    "departamento": "624ff04e1ef45c3d788a036a",
+	"provincia": "624ff0fe1ef45c3d788a041d",
+	"distrito": "624ff13b1ef45c3d788a0b28",
+	"nombre": "IE 00474 GERMAN TEJADA VELA",
+	"mesa": "071073",
+	"votantes": 244
+}
+
+### ELIMINAMOS UN CENTRO DE VOTACIÓN ###
+DELETE {{$dotenv HOST}}/centros-votacion/{{id}}
+Authorization: {{authToken}}
+Content-Type: {{$dotenv CONTENT_TYPE}}
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+
+### IMPORTAMOS LOS CENTROS DE VOTACION DESDE UN EXCEL ###
+POST {{$dotenv HOST}}/centros-votacion/import-excel
+Authorization: {{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Source: {{$dotenv SOURCE}}
+Origin: {{$dotenv ORIGIN}}
+Ip: {{$dotenv IP}}
+Device: {{$dotenv DEVICE}}
+Browser: {{$dotenv BROWSER}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./test.xlsx
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

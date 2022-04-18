@@ -10,6 +10,7 @@ declare namespace Express {
 				_id: string;
 				codigo: string;
 			};
+			anho?: number;
 		};
 	}
 }
