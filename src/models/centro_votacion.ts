@@ -7,6 +7,7 @@ import validator from 'validator';
 import { IDepartamento } from './ubigeo/departamento';
 import { IProvincia } from './ubigeo/provincia';
 import { IDistrito } from './ubigeo/distrito';
+import { IUsuario } from './usuario';
 
 /*******************************************************************************************************/
 // Interface del Modelo //
@@ -18,6 +19,8 @@ export interface ICentroVotacion extends Document {
 	distrito?: PopulatedDoc<IDistrito>;
 	nombre: string;
 	mesa: string;
+	personero_local?: PopulatedDoc<IUsuario>;
+	personero_mesa?: PopulatedDoc<IUsuario>;
 	votantes?: number;
 	anho: number;
 	createdAt: Date;
@@ -69,6 +72,14 @@ const CentroVotacionSchema: Schema = new Schema(
 			},
 			minLength: [6, 'El número de mesa debe tener 6 digitos'],
 			maxLength: [6, 'El número de mesa debe tener 6 digitos']
+		},
+		personero_local: {
+			ref: 'Usuario',
+			type: Schema.Types.ObjectId
+		},
+		personero_mesa: {
+			ref: 'Usuario',
+			type: Schema.Types.ObjectId
 		},
 		votantes: Number,
 		anho: Number

@@ -106,10 +106,12 @@ export const getAll: Handler = async (req, res) => {
 
 		// Intentamos realizar la búsqueda de todos los centros de votación paginados
 		const list: Array<ICentroVotacion> = await CentroVotacion.find(queryCentros, exclude_campos)
-			.sort({ ubigeo: 'asc', nombre: 'asc', mesa: 'asc' })
+			.sort({ ubigeo: 'asc', mesa: 'asc' })
 			.populate('departamento', exclude_campos)
 			.populate('provincia', exclude_campos)
 			.populate('distrito', exclude_campos)
+			.populate('personero_local', exclude_campos)
+			.populate('personero_mesa', exclude_campos)
 			.collation({ locale: 'es', numericOrdering: true })
 			.skip((page - 1) * pageSize)
 			.limit(pageSize);
@@ -148,7 +150,9 @@ export const get: Handler = async (req, res) => {
 		const centro_votacion: ICentroVotacion | null = await CentroVotacion.findById(id, exclude_campos)
 			.populate('departamento', exclude_campos)
 			.populate('provincia', exclude_campos)
-			.populate('distrito', exclude_campos);
+			.populate('distrito', exclude_campos)
+			.populate('personero_local', exclude_campos)
+			.populate('personero_mesa', exclude_campos);
 
 		// Retornamos los datos del centro de votación encontrado
 		return res.json({
@@ -171,25 +175,17 @@ export const get: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
 	// Leemos las cabeceras, el usuario, el cuerpo y los archivos de la petición
-	const { headers, usuario, query, body } = req;
+	const { headers, usuario, body } = req;
 
 	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
 	const { source, origin, ip, device, browser } = headers;
 
 	try {
-		// Inicializamos el departamento
-		let departamento: IDepartamento | null = null;
-		// Si es un superusuario
-		if (usuario.rol.super) {
-			// Obtenemos los datos del departamento por id si existe
-			departamento = await Departamento.findById(body.departamento);
-		} else {
-			// Obtenemos los datos del departamento por id si existe
-			departamento = await Departamento.findById(usuario.departamento?._id);
+		// Si no es un superusuario
+		if (!usuario.rol.super) {
 			body.departamento = usuario.departamento?._id;
 		}
-		// Obtenemos los datos de la provincia si existe
-		const provincia: IProvincia | null = await Provincia.findById(body.provincia);
+
 		// Obtenemos los datos del distrito si existe
 		const distrito: IDistrito | null = await Distrito.findById(body.distrito);
 
@@ -594,12 +590,12 @@ const validateFields = async (row: Row, index: number, codigo: string, superUser
 	if (!distrito) {
 		return `Fila ${index}: El distrito ${`${row[0]}`.substring(4, 6)} no existe`;
 	}
-	// Obtenemos los datos del número de mesa si existe
+	/* // Obtenemos los datos del número de mesa si existe
 	const centro_votacion: ICentroVotacion | null = await CentroVotacion.findOne({ mesa: `${row[5]}` });
 	// Si existen un centro de votación con el número de mesa
 	if (centro_votacion) {
 		return `Fila ${index}: El número de mesa ${row[5]}, se encuentra registrado`;
-	}
+	} */
 	// Si pasó todas las validaciones
 	return 'ok';
 };
