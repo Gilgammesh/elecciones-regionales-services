@@ -5,7 +5,6 @@ import { Router } from 'express';
 import { validarToken, validarRol } from '../middlewares/authentication';
 import * as usuario from '../controllers/usuario.controller';
 import * as rol from '../controllers/admin/rol.controller';
-import * as departamento from '../controllers/ubigeo/departamento.controller';
 
 /*******************************************************************************************************/
 // Instanciamos router //
@@ -20,6 +19,7 @@ const router: Router = Router();
 router.get('/roles', [validarToken, validarRol], rol.getAll);
 
 // Usuarios
+router.post('/import-excel', [validarToken, validarRol], usuario.importExcel);
 router.get('/', [validarToken, validarRol], usuario.getAll);
 router.post('/', [validarToken, validarRol], usuario.create);
 router.get('/:id', [validarToken, validarRol], usuario.get);

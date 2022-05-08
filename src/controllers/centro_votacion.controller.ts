@@ -40,7 +40,7 @@ export const getAll: Handler = async (req, res) => {
 		// Definimos el query para los centros de votación
 		let queryCentros = {};
 
-		// Añadimos el añó
+		// Añadimos el año
 		queryCentros = { ...queryCentros, anho: usuario.anho };
 		// Si es un superusuario
 		if (usuario.rol.super) {
@@ -76,6 +76,20 @@ export const getAll: Handler = async (req, res) => {
 					ubigeo: { $regex: `^${usuario.departamento?.codigo}${query.provincia}${query.distrito}.*` }
 				};
 			}
+		}
+		// Filtramos por el query de local
+		if (query.local && query.local !== 'todos') {
+			queryCentros = {
+				...queryCentros,
+				nombre: query.local
+			};
+		}
+		// Filtramos por el query de mesa
+		if (query.mesa && query.mesa !== 'todos') {
+			queryCentros = {
+				...queryCentros,
+				mesa: query.mesa
+			};
 		}
 
 		// Intentamos obtener el total de registros de centros de votación
@@ -181,22 +195,44 @@ export const create: Handler = async (req, res) => {
 	const { source, origin, ip, device, browser } = headers;
 
 	try {
+		// Inicializamos el código de departament
+		let codDpto: string | undefined = '';
 		// Si no es un superusuario
-		if (!usuario.rol.super) {
-			body.departamento = usuario.departamento?._id;
+		if (usuario.rol.super) {
+			codDpto = body.departamento;
+		} else {
+			codDpto = usuario.departamento?.codigo;
 		}
 
+		// Obtenemos los datos del departamento si existe
+		const departamento: IDepartamento | null = await Departamento.findOne({ codigo: codDpto });
+
+		// Obtenemos los datos de la provincia si existe si existe
+		const provincia: IProvincia | null = await Provincia.findOne({
+			codigo: body.provincia,
+			departamento: codDpto
+		});
+
 		// Obtenemos los datos del distrito si existe
-		const distrito: IDistrito | null = await Distrito.findById(body.distrito);
-
-		// Definimos el ubigeo
-		body.ubigeo = distrito?.ubigeo;
-
-		// Pasamos el año
-		body.anho = usuario.anho;
+		const distrito: IDistrito | null = await Distrito.findOne({
+			codigo: body.distrito,
+			provincia: body.provincia,
+			departamento: codDpto
+		});
 
 		// Creamos el modelo de un nuevo centro de votacion
-		const newCentroVotacion: ICentroVotacion = new CentroVotacion(body);
+		const newCentroVotacion: ICentroVotacion = new CentroVotacion({
+			ubigeo: distrito?.ubigeo,
+			departamento: departamento?._id,
+			provincia: provincia?._id,
+			distrito: distrito?._id,
+			nombre: body.nombre,
+			mesa: body.mesa,
+			...(body.votantes && {
+				votantes: parseInt(body.votantes, 10)
+			}),
+			anho: usuario.anho
+		});
 
 		// Intentamos guardar el nuevo centro de votación
 		const centroVotacionOut: ICentroVotacion = await newCentroVotacion.save();
@@ -590,12 +626,163 @@ const validateFields = async (row: Row, index: number, codigo: string, superUser
 	if (!distrito) {
 		return `Fila ${index}: El distrito ${`${row[0]}`.substring(4, 6)} no existe`;
 	}
-	/* // Obtenemos los datos del número de mesa si existe
+	// Obtenemos los datos del número de mesa si existe
 	const centro_votacion: ICentroVotacion | null = await CentroVotacion.findOne({ mesa: `${row[5]}` });
 	// Si existen un centro de votación con el número de mesa
 	if (centro_votacion) {
 		return `Fila ${index}: El número de mesa ${row[5]}, se encuentra registrado`;
-	} */
+	}
 	// Si pasó todas las validaciones
 	return 'ok';
+};
+
+/*******************************************************************************************************/
+// Obtener todos los locales //
+/*******************************************************************************************************/
+export const getLocales: Handler = async (req, res) => {
+	// Leemos el usuario y el query de la petición
+	const { usuario, query } = req;
+
+	try {
+		// Definimos el query para los locales
+		let queryLocales = {};
+
+		// Añadimos el año
+		queryLocales = { ...queryLocales, anho: usuario.anho };
+		// Si es un superusuario
+		if (usuario.rol.super) {
+			// Filtramos por el query de departamento
+			if (query.departamento && query.departamento !== 'todos') {
+				queryLocales = { ...queryLocales, ubigeo: { $regex: `^${query.departamento}.*` } };
+			}
+			// Filtramos por el query de provincia
+			if (query.provincia && query.provincia !== 'todos') {
+				queryLocales = { ...queryLocales, ubigeo: { $regex: `^${query.departamento}${query.provincia}.*` } };
+			}
+			// Filtramos por el query de distrito
+			if (query.distrito && query.distrito !== 'todos') {
+				queryLocales = {
+					...queryLocales,
+					ubigeo: { $regex: `^${query.departamento}${query.provincia}${query.distrito}.*` }
+				};
+			}
+		} else {
+			// Filtramos por los que no son superusuarios
+			queryLocales = { ...queryLocales, ubigeo: { $regex: `^${usuario.departamento?.codigo}.*` } };
+			// Filtramos por el query de provincia
+			if (query.provincia && query.provincia !== 'todos') {
+				queryLocales = {
+					...queryLocales,
+					ubigeo: { $regex: `^${usuario.departamento?.codigo}${query.provincia}.*` }
+				};
+			}
+			// Filtramos por el query de distrito
+			if (query.distrito && query.distrito !== 'todos') {
+				queryLocales = {
+					...queryLocales,
+					ubigeo: { $regex: `^${usuario.departamento?.codigo}${query.provincia}${query.distrito}.*` }
+				};
+			}
+		}
+
+		// Intentamos realizar la búsqueda de todos los locales agrupados
+		const list: Array<ICentroVotacion> = await CentroVotacion.aggregate([
+			{ $match: queryLocales },
+			{ $group: { _id: '$nombre' } },
+			{ $sort: { _id: 1 } }
+		]);
+
+		// Retornamos la lista de locales
+		return res.json({
+			status: true,
+			list
+		});
+	} catch (error) {
+		// Mostramos el error en consola
+		console.log('Centros de Votación', 'Obteniendo la lista de locales', error);
+		// Retornamos
+		return res.status(404).json({
+			status: false,
+			msg: 'No se pudo obtener los locales'
+		});
+	}
+};
+
+/*******************************************************************************************************/
+// Obtener todas las mesas //
+/*******************************************************************************************************/
+export const getMesas: Handler = async (req, res) => {
+	// Leemos el usuario y el query de la petición
+	const { usuario, query } = req;
+
+	try {
+		// Definimos el query para las mesas
+		let queryMesas = {};
+
+		// Añadimos el año
+		queryMesas = { ...queryMesas, anho: usuario.anho };
+		// Si es un superusuario
+		if (usuario.rol.super) {
+			// Filtramos por el query de departamento
+			if (query.departamento && query.departamento !== 'todos') {
+				queryMesas = { ...queryMesas, ubigeo: { $regex: `^${query.departamento}.*` } };
+			}
+			// Filtramos por el query de provincia
+			if (query.provincia && query.provincia !== 'todos') {
+				queryMesas = { ...queryMesas, ubigeo: { $regex: `^${query.departamento}${query.provincia}.*` } };
+			}
+			// Filtramos por el query de distrito
+			if (query.distrito && query.distrito !== 'todos') {
+				queryMesas = {
+					...queryMesas,
+					ubigeo: { $regex: `^${query.departamento}${query.provincia}${query.distrito}.*` }
+				};
+			}
+		} else {
+			// Filtramos por los que no son superusuarios
+			queryMesas = { ...queryMesas, ubigeo: { $regex: `^${usuario.departamento?.codigo}.*` } };
+			// Filtramos por el query de provincia
+			if (query.provincia && query.provincia !== 'todos') {
+				queryMesas = {
+					...queryMesas,
+					ubigeo: { $regex: `^${usuario.departamento?.codigo}${query.provincia}.*` }
+				};
+			}
+			// Filtramos por el query de distrito
+			if (query.distrito && query.distrito !== 'todos') {
+				queryMesas = {
+					...queryMesas,
+					ubigeo: { $regex: `^${usuario.departamento?.codigo}${query.provincia}${query.distrito}.*` }
+				};
+			}
+		}
+		// Filtramos por el query de local
+		if (query.local && query.local !== 'todos') {
+			queryMesas = {
+				...queryMesas,
+				nombre: query.local
+			};
+		}
+
+		// Intentamos realizar la búsqueda de todos las mesas agrupadas
+		const list: Array<ICentroVotacion> = await CentroVotacion.aggregate([
+			{ $match: queryMesas },
+			{ $group: { _id: '$mesa' } },
+			{ $sort: { _id: 1 } }
+		]);
+
+		// Retornamos la lista de mesas
+		return res.json({
+			status: true,
+			list
+		});
+	} catch (error) {
+		// Mostramos el error en consola
+		console.log('Centros de Votación', 'Obteniendo la lista de mesas', error);
+		// Retornamos
+		return res.status(404).json({
+			status: false,
+			msg: 'No se pudo obtener las mesas'
+		});
+	}
 };

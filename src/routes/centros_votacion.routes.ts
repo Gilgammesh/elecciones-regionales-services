@@ -14,6 +14,11 @@ const router: Router = Router();
 // Definimos las rutas //
 /*******************************************************************************************************/
 
+// Locales
+router.get('/locales', [validarToken, validarRol], centro_votacion.getLocales);
+// Mesas
+router.get('/mesas', [validarToken, validarRol], centro_votacion.getMesas);
+
 // Centros de votación
 router.post('/import-excel', [validarToken, validarRol], centro_votacion.importExcel);
 router.get('/', [validarToken, validarRol], centro_votacion.getAll);

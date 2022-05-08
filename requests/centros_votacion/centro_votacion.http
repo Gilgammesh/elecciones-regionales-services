@@ -38,9 +38,9 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-	"departamento": "624ff04e1ef45c3d788a036a",
-	"provincia": "624ff0fe1ef45c3d788a041d",
-	"distrito": "624ff13b1ef45c3d788a0b28",
+	"departamento": "22",
+	"provincia": "01",
+	"distrito": "01",
 	"nombre": "IE 00474 GERMAN TEJADA VELA",
 	"mesa": "071073",
 	"votantes": 244
@@ -70,9 +70,9 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "departamento": "624ff04e1ef45c3d788a036a",
-	"provincia": "624ff0fe1ef45c3d788a041d",
-	"distrito": "624ff13b1ef45c3d788a0b28",
+    "departamento": "22",
+	"provincia": "01",
+	"distrito": "02",
 	"nombre": "IE 00474 GERMAN TEJADA VELA",
 	"mesa": "071073",
 	"votantes": 244
