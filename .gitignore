@@ -3,9 +3,8 @@ node_modules
 
 # Carpetas código compilado
 dist
-build
-app
-somosperu
+dist_app
+dist_somosperu
 
 # Archivos subidos a la Aplicación
 uploads
