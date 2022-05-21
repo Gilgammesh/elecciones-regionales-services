@@ -4,6 +4,8 @@ node_modules
 # Carpetas código compilado
 dist
 build
+app
+somosperu
 
 # Archivos subidos a la Aplicación
 uploads
