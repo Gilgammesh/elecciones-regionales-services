@@ -2,26 +2,21 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Schema, model, Document, PopulatedDoc } from 'mongoose'
-import uniqueValidator from 'mongoose-unique-validator'
 import validator from 'validator'
-import { IRol } from './admin/rol'
 import { IDepartamento } from './ubigeo/departamento'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
 /*******************************************************************************************************/
-export interface IUsuario extends Document {
+export interface IPersonero extends Document {
   nombres: string
   apellidos: string
   dni: string
-  celular?: string
-  email?: string
-  genero: string
+  celular: string
+  tipo: string
   password: string
-  img?: string
-  rol: PopulatedDoc<IRol>
   departamento?: PopulatedDoc<IDepartamento>
-  super: boolean
+  anho: number
   estado: boolean
   createdAt: Date
   updatedAt: Date
@@ -30,7 +25,7 @@ export interface IUsuario extends Document {
 /*******************************************************************************************************/
 // Creamos el schema y definimos los nombres y tipos de datos //
 /*******************************************************************************************************/
-const UsuarioSchema: Schema = new Schema(
+const PersoneroSchema: Schema = new Schema(
   {
     nombres: {
       type: String,
@@ -52,8 +47,7 @@ const UsuarioSchema: Schema = new Schema(
     },
     dni: {
       type: String,
-      unique: true,
-      required: [true, 'El DNI es requerido y obligatorio'],
+      required: [true, 'El DNI es requerido'],
       validate: {
         validator: validator.isNumeric,
         message: 'El DNI debe tener sólo números'
@@ -61,35 +55,38 @@ const UsuarioSchema: Schema = new Schema(
       minLength: [8, 'El DNI debe tener 8 digitos'],
       maxLength: [8, 'El DNI debe tener 8 digitos']
     },
-    celular: String,
-    email: String,
-    genero: {
+    celular: {
       type: String,
-      enum: {
-        values: ['M', 'F'],
-        message: '{VALUE}, no es un género válido. Elija entre: M | F'
+      required: [true, 'El celular es requerido'],
+      validate: {
+        validator: validator.isNumeric,
+        message: 'El celular debe tener sólo números'
       },
-      required: [true, 'El género es requerido']
+      minLength: [9, 'El celular debe tener 9 digitos'],
+      maxLength: [9, 'El celular debe tener 9 digitos']
+    },
+    tipo: {
+      type: String,
+      required: [true, 'El tipo es requerido'],
+      enum: {
+        values: ['mesa', 'local', 'distrito', 'provincia'],
+        message:
+          '{VALUE}, no es un tipo válido. Elija entre: mesa | local | distrito | provincia'
+      }
     },
     password: {
       type: String,
       required: [true, 'La contraseña es requerida'],
-      minlength: [6, 'La contraseña debe tener mínimo 6 dígitos']
-    },
-    img: String,
-    rol: {
-      ref: 'AdminRol',
-      type: Schema.Types.ObjectId,
-      required: [true, 'El id del rol del usuario es requerido']
+      minlength: [8, 'La contraseña debe tener mínimo 8 dígitos']
     },
     departamento: {
+      required: [true, 'El departamento es requerido'],
       ref: 'UbigeoDepartamento',
       type: Schema.Types.ObjectId
     },
-    super: {
-      type: Boolean,
-      default: false,
-      required: true
+    anho: {
+      type: Number,
+      required: [true, 'El año es requerido']
     },
     estado: {
       type: Boolean,
@@ -98,20 +95,13 @@ const UsuarioSchema: Schema = new Schema(
     }
   },
   {
-    collection: 'usuarios',
+    collection: 'personeros',
     timestamps: true,
     versionKey: false
   }
 )
 
 /*******************************************************************************************************/
-// Validamos los campos que son únicos, con mensaje personalizado //
-/*******************************************************************************************************/
-UsuarioSchema.plugin(uniqueValidator, {
-  message: '{VALUE}, ya se encuentra registrado'
-})
-
-/*******************************************************************************************************/
 // Exportamos el modelo de datos //
 /*******************************************************************************************************/
-export default model<IUsuario>('Usuario', UsuarioSchema)
+export default model<IPersonero>('Personero', PersoneroSchema)

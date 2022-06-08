@@ -4,10 +4,10 @@ POST {{$dotenv HOST}}/auth/token
 Content-Type: {{$dotenv CONTENT_TYPE}}
 
 {
-    "dni": "{{$dotenv USERNAME}}",
-    "password": "{{$dotenv PASSWORD}}",
-    "expires": true,
-    "time": "1d"
+  "dni": "{{$dotenv USERNAME}}",
+  "password": "{{$dotenv PASSWORD}}",
+  "expires": true,
+  "time": "1d"
 }
 
 ### OBTENEMOS EL TOKEN DE AUTORIZACIÓN ###
@@ -16,7 +16,7 @@ Content-Type: {{$dotenv CONTENT_TYPE}}
 ### OBTENEMOS TODOS LOS CENTROS Y MESAS DE VOTACIÓ ###
 GET {{$dotenv HOST}}/centros-votacion
     ?page=1
-    &pageSize=20
+    &pageSize=10
     &departamento=todos
 Authorization: {{authToken}}
 Content-Type: {{$dotenv CONTENT_TYPE}}
@@ -70,7 +70,7 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 {
-    "departamento": "22",
+  "departamento": "22",
 	"provincia": "01",
 	"distrito": "02",
 	"nombre": "IE 00474 GERMAN TEJADA VELA",
@@ -100,8 +100,8 @@ Device: {{$dotenv DEVICE}}
 Browser: {{$dotenv BROWSER}}
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="file"; filename="test.xlsx"
+Content-Disposition: form-data; name="file"; filename="test_mesas.xlsx"
 Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
-< ./test.xlsx
+< ./test_mesas.xlsx
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--

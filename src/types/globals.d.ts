@@ -1,3 +1,3 @@
-import { Socket } from 'socket.io';
+import { Socket } from 'socket.io'
 
-declare var socketIO: Socket;
+declare var socketIO: Socket

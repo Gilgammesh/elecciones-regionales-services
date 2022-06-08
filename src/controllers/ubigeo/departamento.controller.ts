@@ -1,337 +1,362 @@
 /*******************************************************************************************************/
 // Importamos las dependencias //
 /*******************************************************************************************************/
-import { Handler } from 'express';
-import { Error } from 'mongoose';
-import Departamento, { IDepartamento } from '../../models/ubigeo/departamento';
-import { saveLog } from '../admin/log.controller';
-import { parseNewDate24H_ } from '../../helpers/date';
-import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination';
-import { eventsLogs } from '../../models/admin/log';
+import { Handler } from 'express'
+import { Error } from 'mongoose'
+import Departamento, { IDepartamento } from '../../models/ubigeo/departamento'
+import { saveLog } from '../admin/log.controller'
+import { parseNewDate24H_ } from '../../helpers/date'
+import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
+import { eventsLogs } from '../../models/admin/log'
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'ubigeo';
-const nombre_submodulo: string = 'departamento';
-const nombre_controlador: string = 'departamento.controller';
-const exclude_campos: string = '-createdAt -updatedAt';
+const nombre_modulo: string = 'ubigeo'
+const nombre_submodulo: string = 'departamento'
+const nombre_controlador: string = 'departamento.controller'
+const exclude_campos: string = '-createdAt -updatedAt'
 const pagination = {
-	page: 1,
-	pageSize: 10
-};
+  page: 1,
+  pageSize: 10
+}
 
 /*******************************************************************************************************/
 // Obtener todos los departamentos //
 /*******************************************************************************************************/
 export const getAll: Handler = async (req, res) => {
-	// Leemos el query de la petición
-	const { query } = req;
+  // Leemos el query de la petición
+  const { query } = req
 
-	try {
-		// Intentamos obtener el total de registros de departamentos
-		const totalRegistros: number = await Departamento.countDocuments();
+  try {
+    // Intentamos obtener el total de registros de departamentos
+    const totalRegistros: number = await Departamento.countDocuments()
 
-		// Obtenemos el número de registros por página y hacemos las validaciones
-		const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize);
-		if (!validatePageSize.status) {
-			return res.status(404).json({
-				status: validatePageSize.status,
-				msg: validatePageSize.msg
-			});
-		}
-		const pageSize = validatePageSize.size;
+    // Obtenemos el número de registros por página y hacemos las validaciones
+    const validatePageSize: any = await getPageSize(
+      pagination.pageSize,
+      query.pageSize
+    )
+    if (!validatePageSize.status) {
+      return res.status(404).json({
+        status: validatePageSize.status,
+        msg: validatePageSize.msg
+      })
+    }
+    const pageSize = validatePageSize.size
 
-		// Obtenemos el número total de páginas
-		const totalPaginas: number = getTotalPages(totalRegistros, pageSize);
+    // Obtenemos el número total de páginas
+    const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
-		// Obtenemos el número de página y hacemos las validaciones
-		const validatePage: any = await getPage(pagination.page, query.page, totalPaginas);
-		if (!validatePage.status) {
-			return res.status(404).json({
-				status: validatePage.status,
-				msg: validatePage.msg
-			});
-		}
-		const page = validatePage.page;
+    // Obtenemos el número de página y hacemos las validaciones
+    const validatePage: any = await getPage(
+      pagination.page,
+      query.page,
+      totalPaginas
+    )
+    if (!validatePage.status) {
+      return res.status(404).json({
+        status: validatePage.status,
+        msg: validatePage.msg
+      })
+    }
+    const page = validatePage.page
 
-		// Intentamos realizar la búsqueda de todos los departamentos paginados
-		const list = await Departamento.find({}, exclude_campos)
-			.sort({ ubigeo: 'asc' })
-			.collation({ locale: 'es', numericOrdering: true })
-			.skip((page - 1) * pageSize)
-			.limit(pageSize);
+    // Intentamos realizar la búsqueda de todos los departamentos paginados
+    const list = await Departamento.find({}, exclude_campos)
+      .sort({ ubigeo: 'asc' })
+      .collation({ locale: 'es', numericOrdering: true })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
 
-		// Retornamos la lista de departamentos
-		return res.json({
-			status: true,
-			pagina: page,
-			totalPaginas,
-			registros: list.length,
-			totalRegistros,
-			list
-		});
-	} catch (error) {
-		// Mostramos el error en consola
-		console.log('Ubigeo', 'Obteniendo los departamentos', error);
-		// Retornamos
-		return res.status(404).json({
-			status: false,
-			msg: 'No se pudo obtener los departamentos'
-		});
-	}
-};
+    // Retornamos la lista de departamentos
+    return res.json({
+      status: true,
+      pagina: page,
+      totalPaginas,
+      registros: list.length,
+      totalRegistros,
+      list
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Obteniendo los departamentos', error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los departamentos'
+    })
+  }
+}
 
 /*******************************************************************************************************/
 // Obtener datos de un departamento //
 /*******************************************************************************************************/
 export const get: Handler = async (req, res) => {
-	// Leemos los parámetros de la petición
-	const { params } = req;
-	// Obtenemos el Id del departamento
-	const { id } = params;
+  // Leemos los parámetros de la petición
+  const { params } = req
+  // Obtenemos el Id del departamento
+  const { id } = params
 
-	try {
-		// Intentamos realizar la búsqueda por id
-		const departamento: IDepartamento | null = await Departamento.findById(id, exclude_campos);
+  try {
+    // Intentamos realizar la búsqueda por id
+    const departamento: IDepartamento | null = await Departamento.findById(
+      id,
+      exclude_campos
+    )
 
-		// Retornamos los datos del departamento encontrado
-		return res.json({
-			status: true,
-			departamento
-		});
-	} catch (error) {
-		// Mostramos el error en consola
-		console.log('Ubigeo', 'Obteniendo departamento', id, error);
-		// Retornamos
-		return res.status(404).json({
-			status: false,
-			msg: 'No se pudo obtener los datos del departamento'
-		});
-	}
-};
+    // Retornamos los datos del departamento encontrado
+    return res.json({
+      status: true,
+      departamento
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Obteniendo departamento', id, error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los datos del departamento'
+    })
+  }
+}
 
 /*******************************************************************************************************/
 // Crear un nuevo departamento //
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
-	// Leemos las cabeceras, el usuario y el cuerpo de la petición
-	const { headers, usuario, body } = req;
+  // Leemos las cabeceras, el usuario y el cuerpo de la petición
+  const { headers, usuario, body } = req
 
-	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
-	const { source, origin, ip, device, browser } = headers;
+  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+  const { source, origin, ip, device, browser } = headers
 
-	try {
-		// Creamos el ubigeo
-		body.ubigeo = `${body.codigo}0000`;
+  try {
+    // Creamos el ubigeo
+    body.ubigeo = `${body.codigo}0000`
 
-		// Creamos el modelo de un nuevo departamento
-		const newDepartamento: IDepartamento = new Departamento(body);
+    // Creamos el modelo de un nuevo departamento
+    const newDepartamento: IDepartamento = new Departamento(body)
 
-		// Intentamos guardar el nuevo departamento
-		const departamentoOut: IDepartamento = await newDepartamento.save();
+    // Intentamos guardar el nuevo departamento
+    const departamentoOut: IDepartamento = await newDepartamento.save()
 
-		// Guardamos el log del evento
-		await saveLog({
-			usuario: usuario._id,
-			fuente: <string>source,
-			origen: <string>origin,
-			ip: <string>ip,
-			dispositivo: <string>device,
-			navegador: <string>browser,
-			modulo: nombre_modulo,
-			submodulo: nombre_submodulo,
-			controller: nombre_controlador,
-			funcion: 'create',
-			descripcion: 'Crear nuevo departamento',
-			evento: eventsLogs.create,
-			data_in: '',
-			data_out: JSON.stringify(departamentoOut, null, 2),
-			procesamiento: 'unico',
-			registros: 1,
-			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
-		});
+    // Guardamos el log del evento
+    await saveLog({
+      usuario: usuario._id,
+      fuente: <string>source,
+      origen: <string>origin,
+      ip: <string>ip,
+      dispositivo: <string>device,
+      navegador: <string>browser,
+      modulo: nombre_modulo,
+      submodulo: nombre_submodulo,
+      controller: nombre_controlador,
+      funcion: 'create',
+      descripcion: 'Crear nuevo departamento',
+      evento: eventsLogs.create,
+      data_in: '',
+      data_out: JSON.stringify(departamentoOut, null, 2),
+      procesamiento: 'unico',
+      registros: 1,
+      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+    })
 
-		// Obtenemos el departamento creado
-		const departamentoResp: IDepartamento | null = await Departamento.findById(departamentoOut._id, exclude_campos);
+    // Obtenemos el departamento creado
+    const departamentoResp: IDepartamento | null = await Departamento.findById(
+      departamentoOut._id,
+      exclude_campos
+    )
 
-		// Si existe un socket
-		if (globalThis.socketIO) {
-			// Emitimos el evento => departamento creado en el módulo ubigeo, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('ubigeo-departamento-creado');
-		}
+    // Si existe un socket
+    if (globalThis.socketIO) {
+      // Emitimos el evento => departamento creado en el módulo ubigeo, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('ubigeo-departamento-creado')
+    }
 
-		// Retornamos el departamento creado
-		return res.json({
-			status: true,
-			msg: 'Se creó el departamento correctamente',
-			departamento: departamentoResp
-		});
-	} catch (error: Error | any) {
-		// Mostramos el error en consola
-		console.log('Ubigeo', 'Crear nuevo departamento', error);
+    // Retornamos el departamento creado
+    return res.json({
+      status: true,
+      msg: 'Se creó el departamento correctamente',
+      departamento: departamentoResp
+    })
+  } catch (error: Error | any) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Crear nuevo departamento', error)
 
-		// Inicializamos el mensaje de error
-		let msg: string = 'No se pudo crear el departamento';
-		// Si existe un error con validación de campo único
-		if (error?.errors) {
-			// Obtenemos el array de errores
-			const array: string[] = Object.keys(error.errors);
-			// Construimos el mensaje de error de acuerdo al campo
-			msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`;
-		}
+    // Inicializamos el mensaje de error
+    let msg: string = 'No se pudo crear el departamento'
+    // Si existe un error con validación de campo único
+    if (error?.errors) {
+      // Obtenemos el array de errores
+      const array: string[] = Object.keys(error.errors)
+      // Construimos el mensaje de error de acuerdo al campo
+      msg = `${error.errors[array[0]].path}: ${
+        error.errors[array[0]].properties.message
+      }`
+    }
 
-		// Retornamos
-		return res.status(404).json({
-			status: false,
-			msg
-		});
-	}
-};
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg
+    })
+  }
+}
 
 /*******************************************************************************************************/
 // Actualizar los datos de un departamento //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
-	// Leemos las cabeceras, el usuario, los parámetros y el cuerpo de la petición
-	const { headers, usuario, params, body } = req;
-	// Obtenemos el Id del departamento
-	const { id } = params;
+  // Leemos las cabeceras, el usuario, los parámetros y el cuerpo de la petición
+  const { headers, usuario, params, body } = req
+  // Obtenemos el Id del departamento
+  const { id } = params
 
-	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
-	const { source, origin, ip, device, browser } = headers;
+  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+  const { source, origin, ip, device, browser } = headers
 
-	try {
-		// Intentamos obtener el departamento antes que se actualice
-		const departamentoIn: IDepartamento | null = await Departamento.findById(id);
+  try {
+    // Intentamos obtener el departamento antes que se actualice
+    const departamentoIn: IDepartamento | null = await Departamento.findById(id)
 
-		// Creamos el ubigeo
-		body.ubigeo = `${body.codigo}0000`;
+    // Creamos el ubigeo
+    body.ubigeo = `${body.codigo}0000`
 
-		// Intentamos realizar la búsqueda por id y actualizamos
-		const departamentoOut: IDepartamento | null = await Departamento.findByIdAndUpdate(id, body, {
-			new: true,
-			runValidators: true,
-			context: 'query'
-		});
+    // Intentamos realizar la búsqueda por id y actualizamos
+    const departamentoOut: IDepartamento | null =
+      await Departamento.findByIdAndUpdate(id, body, {
+        new: true,
+        runValidators: true,
+        context: 'query'
+      })
 
-		// Guardamos el log del evento
-		await saveLog({
-			usuario: usuario._id,
-			fuente: <string>source,
-			origen: <string>origin,
-			ip: <string>ip,
-			dispositivo: <string>device,
-			navegador: <string>browser,
-			modulo: nombre_modulo,
-			submodulo: nombre_submodulo,
-			controller: nombre_controlador,
-			funcion: 'update',
-			descripcion: 'Actualizar un departamento',
-			evento: eventsLogs.update,
-			data_in: JSON.stringify(departamentoIn, null, 2),
-			data_out: JSON.stringify(departamentoOut, null, 2),
-			procesamiento: 'unico',
-			registros: 1,
-			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
-		});
+    // Guardamos el log del evento
+    await saveLog({
+      usuario: usuario._id,
+      fuente: <string>source,
+      origen: <string>origin,
+      ip: <string>ip,
+      dispositivo: <string>device,
+      navegador: <string>browser,
+      modulo: nombre_modulo,
+      submodulo: nombre_submodulo,
+      controller: nombre_controlador,
+      funcion: 'update',
+      descripcion: 'Actualizar un departamento',
+      evento: eventsLogs.update,
+      data_in: JSON.stringify(departamentoIn, null, 2),
+      data_out: JSON.stringify(departamentoOut, null, 2),
+      procesamiento: 'unico',
+      registros: 1,
+      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+    })
 
-		// Obtenemos el departamento actualizado
-		const departamentoResp: IDepartamento | null = await Departamento.findById(id, exclude_campos);
+    // Obtenemos el departamento actualizado
+    const departamentoResp: IDepartamento | null = await Departamento.findById(
+      id,
+      exclude_campos
+    )
 
-		// Si existe un socket
-		if (globalThis.socketIO) {
-			// Emitimos el evento => departamento actualizado en el módulo ubigeo, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('ubigeo-departamento-actualizado');
-		}
+    // Si existe un socket
+    if (globalThis.socketIO) {
+      // Emitimos el evento => departamento actualizado en el módulo ubigeo, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('ubigeo-departamento-actualizado')
+    }
 
-		// Retornamos el departamento actualizado
-		return res.json({
-			status: true,
-			msg: 'Se actualizó el departamento correctamente',
-			departamento: departamentoResp
-		});
-	} catch (error: Error | any) {
-		// Mostramos el error en consola
-		console.log('Ubigeo', 'Actualizando departamento', id, error);
+    // Retornamos el departamento actualizado
+    return res.json({
+      status: true,
+      msg: 'Se actualizó el departamento correctamente',
+      departamento: departamentoResp
+    })
+  } catch (error: Error | any) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Actualizando departamento', id, error)
 
-		// Inicializamos el mensaje de error
-		let msg: string = 'No se pudo actualizar el departamento';
-		// Si existe un error con validación de campo único
-		if (error?.errors) {
-			// Obtenemos el array de errores
-			const array: string[] = Object.keys(error.errors);
-			// Construimos el mensaje de error de acuerdo al campo
-			msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`;
-		}
+    // Inicializamos el mensaje de error
+    let msg: string = 'No se pudo actualizar el departamento'
+    // Si existe un error con validación de campo único
+    if (error?.errors) {
+      // Obtenemos el array de errores
+      const array: string[] = Object.keys(error.errors)
+      // Construimos el mensaje de error de acuerdo al campo
+      msg = `${error.errors[array[0]].path}: ${
+        error.errors[array[0]].properties.message
+      }`
+    }
 
-		// Retornamos
-		return res.status(404).json({
-			status: false,
-			msg
-		});
-	}
-};
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg
+    })
+  }
+}
 
 /*******************************************************************************************************/
 // Eliminar un departamento //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
-	// Leemos las cabeceras, el usuario y los parámetros de la petición
-	const { headers, usuario, params } = req;
-	// Obtenemos el Id del departamento
-	const { id } = params;
+  // Leemos las cabeceras, el usuario y los parámetros de la petición
+  const { headers, usuario, params } = req
+  // Obtenemos el Id del departamento
+  const { id } = params
 
-	// Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
-	const { source, origin, ip, device, browser } = headers;
+  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+  const { source, origin, ip, device, browser } = headers
 
-	try {
-		// Obtenemos el departamento antes que se elimine
-		const departamentoResp: IDepartamento | null = await Departamento.findById(id, exclude_campos);
+  try {
+    // Obtenemos el departamento antes que se elimine
+    const departamentoResp: IDepartamento | null = await Departamento.findById(
+      id,
+      exclude_campos
+    )
 
-		// Intentamos realizar la búsqueda por id y removemos
-		const departamentoIn: IDepartamento | null = await Departamento.findByIdAndRemove(id);
+    // Intentamos realizar la búsqueda por id y removemos
+    const departamentoIn: IDepartamento | null =
+      await Departamento.findByIdAndRemove(id)
 
-		// Guardamos el log del evento
-		await saveLog({
-			usuario: usuario._id,
-			fuente: <string>source,
-			origen: <string>origin,
-			ip: <string>ip,
-			dispositivo: <string>device,
-			navegador: <string>browser,
-			modulo: nombre_modulo,
-			submodulo: nombre_submodulo,
-			controller: nombre_controlador,
-			funcion: 'remove',
-			descripcion: 'Remover un departamento',
-			evento: eventsLogs.remove,
-			data_in: JSON.stringify(departamentoIn, null, 2),
-			data_out: '',
-			procesamiento: 'unico',
-			registros: 1,
-			id_grupo: `${usuario._id}@${parseNewDate24H_()}`
-		});
+    // Guardamos el log del evento
+    await saveLog({
+      usuario: usuario._id,
+      fuente: <string>source,
+      origen: <string>origin,
+      ip: <string>ip,
+      dispositivo: <string>device,
+      navegador: <string>browser,
+      modulo: nombre_modulo,
+      submodulo: nombre_submodulo,
+      controller: nombre_controlador,
+      funcion: 'remove',
+      descripcion: 'Remover un departamento',
+      evento: eventsLogs.remove,
+      data_in: JSON.stringify(departamentoIn, null, 2),
+      data_out: '',
+      procesamiento: 'unico',
+      registros: 1,
+      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+    })
 
-		// Si existe un socket
-		if (globalThis.socketIO) {
-			// Emitimos el evento => departamento eliminado en el módulo ubigeo, a todos los usuarios conectados //
-			globalThis.socketIO.broadcast.emit('ubigeo-departamento-eliminado');
-		}
+    // Si existe un socket
+    if (globalThis.socketIO) {
+      // Emitimos el evento => departamento eliminado en el módulo ubigeo, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('ubigeo-departamento-eliminado')
+    }
 
-		// Retornamos el departamento eliminado
-		return res.json({
-			status: true,
-			msg: 'Se eliminó el departamento correctamente',
-			departamento: departamentoResp
-		});
-	} catch (error) {
-		// Mostramos el error en consola
-		console.log('Ubigeo', 'Eliminando departamento', id, error);
-		// Retornamos
-		return res.status(404).json({
-			status: false,
-			msg: 'No se pudo eliminar el departamento'
-		});
-	}
-};
+    // Retornamos el departamento eliminado
+    return res.json({
+      status: true,
+      msg: 'Se eliminó el departamento correctamente',
+      departamento: departamentoResp
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Eliminando departamento', id, error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo eliminar el departamento'
+    })
+  }
+}
