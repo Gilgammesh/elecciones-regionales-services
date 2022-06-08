@@ -147,7 +147,7 @@ export const get: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Admin', 'Obteniendo datos de usuario', id, error)
+    console.log('Usuarios', 'Obteniendo datos de usuario', id, error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -161,7 +161,7 @@ export const get: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, el cuerpo y los archivos de la petición
-  const { headers, usuario, query, body, files } = req
+  const { headers, usuario, body, files } = req
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
   const { source, origin, ip, device, browser } = headers
@@ -512,178 +512,4 @@ export const remove: Handler = async (req, res) => {
       msg: 'No se pudo eliminar el usuario'
     })
   }
-}
-
-/*******************************************************************************************************/
-// Interface mensajes de errores //
-/*******************************************************************************************************/
-interface IMsgError {
-  index: number
-  msg: string
-}
-
-/*******************************************************************************************************/
-// Procesar archivo excel de personeros //
-/*******************************************************************************************************/
-export const importExcel: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario y los archivos de la petición
-  const { headers, usuario, files, body } = req
-
-  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
-  const { source, origin, ip, device, browser } = headers
-
-  // Si existe un archivo de excel se crea la ruta y se almacena
-  if (files && Object.keys(files).length > 0 && files.file) {
-    try {
-      // Guardamos el archivo localmente para recorrerlo y obtenemos la ruta
-      const pathFile: string = await storeFile(
-        <UploadedFile>files.file,
-        'usuarios',
-        'temp'
-      )
-
-      // Obtenemos las filas de la plantilla de excel
-      const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
-
-      // Inicializamos el array de mensjaes de errores
-      let msgError: IMsgError[] = []
-
-      // Establecemos la fila de inicio
-      const rowStart: number = 1
-
-      // Establecemos el id de grupo de log
-      let id_grupo: string = `${usuario._id}@${parseNewDate24H_()}`
-
-      // Recorremos las filas y guardamos cada fila previamente validada
-      const promises = rows.map(async (row, index) => {
-        // Si el el index es mayor o igual al fila de inicio
-        if (index >= rowStart) {
-          const msg = await validateFields(
-            row,
-            index,
-            usuario.departamento ? usuario.departamento?.codigo : '',
-            usuario.rol.super
-          )
-          // Si pasó las pruebas de valicación, guardamos los datos del personero
-          if (msg === 'ok') {
-            // Obtenemos el rol de Personero
-            const rolPers = await Rol.findOne({ codigo: 2 })
-            // Encriptamos la contraseña personalizada, antes de guardarla
-            const iniNo = `${row[0]}`.trim().slice(0, 1).toLocaleUpperCase()
-            const iniAp = `${row[1]}`.trim().slice(0, 1).toLocaleUpperCase()
-            const pwdEncrypted: string | null = await encrypt(
-              `${row[2]}${iniNo}${iniAp}`
-            )
-
-            // Creamos el modelo de un nuevo personero
-            const newUsuario: IUsuario = new Usuario({
-              nombres: `${row[0]}`.trim(),
-              apellidos: `${row[1]}`.trim(),
-              dni: `${row[2]}`,
-              celular: `${row[3]}`,
-              genero: 'M',
-              password: pwdEncrypted,
-              rol: rolPers?._id,
-              departamento: usuario.departamento
-                ? usuario.departamento?._id
-                : req.body.departamento,
-              anho: usuario.anho
-            })
-
-            // Intentamos guardar el nuevo personero
-            const usuarioOut: IUsuario = await newUsuario.save()
-
-            // Guardamos el log del evento
-            await saveLog({
-              usuario: usuario._id,
-              fuente: <string>source,
-              origen: <string>origin,
-              ip: <string>ip,
-              dispositivo: <string>device,
-              navegador: <string>browser,
-              modulo: nombre_modulo,
-              submodulo: nombre_submodulo,
-              controller: nombre_controlador,
-              funcion: 'create',
-              descripcion: 'Crear nuevo usuario personero por excel importado',
-              evento: eventsLogs.create,
-              data_in: '',
-              data_out: JSON.stringify(usuarioOut, null, 2),
-              procesamiento: 'masivo',
-              registros: 1,
-              id_grupo
-            })
-          } else {
-            // Guardamos el mensaje de error en el array de mensajes
-            msgError.push({ index, msg })
-          }
-        }
-        return null
-      })
-      await Promise.all(promises)
-
-      // Si existe un socket
-      if (globalThis.socketIO) {
-        // Emitimos el evento => usuarios personeros importados en el módulo usuarios, a todos los usuarios conectados //
-        globalThis.socketIO.broadcast.emit('usuarios-importados')
-      }
-
-      // Retornamos el detalle de los mensajes de error si existen
-      return res.json({
-        status: true,
-        errores: _.orderBy(msgError, ['index'], ['asc'])
-      })
-    } catch (error) {
-      // Mostramos el error en consola
-      console.log('Usuarios', 'Importando Excel', error)
-      // Retornamos
-      return res.status(404).json({
-        status: false,
-        msg: 'No se pudo subir el archivo excel. Consulte con el administrador del Sistema!!'
-      })
-    }
-  }
-}
-
-/*******************************************************************************************************/
-// Función para validar los campos del excel de usuarios personeros //
-/*******************************************************************************************************/
-const validateFields = async (
-  row: Row,
-  index: number,
-  codigo: string,
-  superUser: boolean
-) => {
-  // Validamos que nombres no esté vacio
-  if (`${row[0]}` === '' || row[0] === null) {
-    return `Fila ${index}: El campo nombres no puede estar vacio`
-  }
-  // Validamos que apellidos no esté vacio
-  if (`${row[1]}` === '' || row[1] === null) {
-    return `Fila ${index}: El campo apellidos no puede estar vacio`
-  }
-  // Validamos que DNI no esté vacio
-  if (`${row[2]}` === '' || row[2] === null) {
-    return `Fila ${index}: El campo DNI no puede estar vacio`
-  }
-  // Validamos que celular no esté vacio
-  if (`${row[3]}` === '' || row[3] === null) {
-    return `Fila ${index}: El campo celular no puede estar vacio`
-  }
-  // Validamos que el DNI tenga 8 dígitos
-  if (`${row[2]}`.length !== 8) {
-    return `Fila ${index}: El campo DNI debe tener 8 dígitos`
-  }
-  // Validamos que el Celular tenga 9 dígitos
-  if (`${row[3]}`.length !== 9) {
-    return `Fila ${index}: El campo Celular debe tener 9 dígitos`
-  }
-  // Obtenemos los datos del usuario con el DNI
-  const usuario: IUsuario | null = await Usuario.findOne({ dni: `${row[2]}` })
-  // Si existen un centro de votación con el número de mesa
-  if (usuario) {
-    return `Fila ${index}: El número de DNI ${row[2]}, se encuentra registrado`
-  }
-  // Si pasó todas las validaciones
-  return 'ok'
 }

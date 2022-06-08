@@ -4,23 +4,25 @@
 import { Schema, model, Document, PopulatedDoc } from 'mongoose'
 import uniqueValidator from 'mongoose-unique-validator'
 import validator from 'validator'
-import { IDepartamento } from './ubigeo/departamento'
-import { IProvincia } from './ubigeo/provincia'
-import { IDistrito } from './ubigeo/distrito'
-import { IUsuario } from './usuario'
+import { IDepartamento } from '../ubigeo/departamento'
+import { IProvincia } from '../ubigeo/provincia'
+import { IDistrito } from '../ubigeo/distrito'
+import { IPersonero } from './personero'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
 /*******************************************************************************************************/
-export interface ICentroVotacion extends Document {
+export interface IMesa extends Document {
   ubigeo: string
   departamento?: PopulatedDoc<IDepartamento>
   provincia?: PopulatedDoc<IProvincia>
   distrito?: PopulatedDoc<IDistrito>
-  nombre: string
+  local: string
   mesa: string
-  personero_local?: PopulatedDoc<IUsuario>
-  personero_mesa?: PopulatedDoc<IUsuario>
+  personero_provincia?: PopulatedDoc<IPersonero>
+  personero_distrito?: PopulatedDoc<IPersonero>
+  personero_local?: PopulatedDoc<IPersonero>
+  personero_mesa?: PopulatedDoc<IPersonero>
   votantes?: number
   anho: number
   createdAt: Date
@@ -30,7 +32,7 @@ export interface ICentroVotacion extends Document {
 /*******************************************************************************************************/
 // Creamos el schema y definimos los nombres y tipos de datos //
 /*******************************************************************************************************/
-const CentroVotacionSchema: Schema = new Schema(
+const MesaSchema: Schema = new Schema(
   {
     ubigeo: {
       type: String,
@@ -57,35 +59,42 @@ const CentroVotacionSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       required: [true, 'El distrito es requerido']
     },
-    nombre: {
+    local: {
       type: String,
-      required: [true, 'El nombre del centro de votación es requerido'],
+      required: [true, 'El local de votación es requerido'],
       trim: true
     },
     mesa: {
       type: String,
-      unique: true,
-      required: [true, 'El número de mesa es requerido y obligatorio'],
+      required: [true, 'El número de mesa es requerido'],
       validate: {
         validator: validator.isNumeric,
-        message: 'El DNI debe tener sólo números'
+        message: 'El número de mesa debe tener sólo números'
       },
       minLength: [6, 'El número de mesa debe tener 6 digitos'],
       maxLength: [6, 'El número de mesa debe tener 6 digitos']
     },
+    personero_provincia: {
+      ref: 'CentroVotacionPersonero',
+      type: Schema.Types.ObjectId
+    },
+    personero_distrito: {
+      ref: 'CentroVotacionPersonero',
+      type: Schema.Types.ObjectId
+    },
     personero_local: {
-      ref: 'Usuario',
+      ref: 'CentroVotacionPersonero',
       type: Schema.Types.ObjectId
     },
     personero_mesa: {
-      ref: 'Usuario',
+      ref: 'CentroVotacionPersonero',
       type: Schema.Types.ObjectId
     },
     votantes: Number,
     anho: Number
   },
   {
-    collection: 'centros_votacion',
+    collection: 'centros_votacion.mesas',
     timestamps: true,
     versionKey: false
   }
@@ -94,11 +103,11 @@ const CentroVotacionSchema: Schema = new Schema(
 /*******************************************************************************************************/
 // Validamos los campos que son únicos, con mensaje personalizado //
 /*******************************************************************************************************/
-CentroVotacionSchema.plugin(uniqueValidator, {
+MesaSchema.plugin(uniqueValidator, {
   message: '{VALUE}, ya se encuentra registrado'
 })
 
 /*******************************************************************************************************/
 // Exportamos el modelo de datos //
 /*******************************************************************************************************/
-export default model<ICentroVotacion>('CentroVotacion', CentroVotacionSchema)
+export default model<IMesa>('CentroVotacionMesa', MesaSchema)

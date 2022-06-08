@@ -3,7 +3,7 @@
 /*******************************************************************************************************/
 import { Schema, model, Document, PopulatedDoc } from 'mongoose'
 import validator from 'validator'
-import { IDepartamento } from './ubigeo/departamento'
+import { IDepartamento } from '../ubigeo/departamento'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
@@ -13,9 +13,10 @@ export interface IPersonero extends Document {
   apellidos: string
   dni: string
   celular: string
-  tipo: string
   password: string
   departamento?: PopulatedDoc<IDepartamento>
+  tipo: string
+  label: string
   anho: number
   estado: boolean
   createdAt: Date
@@ -65,15 +66,6 @@ const PersoneroSchema: Schema = new Schema(
       minLength: [9, 'El celular debe tener 9 digitos'],
       maxLength: [9, 'El celular debe tener 9 digitos']
     },
-    tipo: {
-      type: String,
-      required: [true, 'El tipo es requerido'],
-      enum: {
-        values: ['mesa', 'local', 'distrito', 'provincia'],
-        message:
-          '{VALUE}, no es un tipo válido. Elija entre: mesa | local | distrito | provincia'
-      }
-    },
     password: {
       type: String,
       required: [true, 'La contraseña es requerida'],
@@ -83,6 +75,20 @@ const PersoneroSchema: Schema = new Schema(
       required: [true, 'El departamento es requerido'],
       ref: 'UbigeoDepartamento',
       type: Schema.Types.ObjectId
+    },
+    tipo: {
+      type: String,
+      required: [true, 'El tipo es requerido'],
+      enum: {
+        values: ['mesa', 'local', 'distrito', 'provincia'],
+        message:
+          '{VALUE}, no es un tipo válido. Elija entre: mesa | local | distrito | provincia'
+      },
+      default: 'mesa'
+    },
+    label: {
+      type: String,
+      default: ''
     },
     anho: {
       type: Number,
@@ -95,7 +101,7 @@ const PersoneroSchema: Schema = new Schema(
     }
   },
   {
-    collection: 'personeros',
+    collection: 'centros_votacion.personeros',
     timestamps: true,
     versionKey: false
   }
@@ -104,4 +110,4 @@ const PersoneroSchema: Schema = new Schema(
 /*******************************************************************************************************/
 // Exportamos el modelo de datos //
 /*******************************************************************************************************/
-export default model<IPersonero>('Personero', PersoneroSchema)
+export default model<IPersonero>('CentroVotacionPersonero', PersoneroSchema)

@@ -19,7 +19,6 @@ const router: Router = Router()
 router.get('/roles', [validarToken, validarRol], rol.getAll)
 
 // Usuarios
-router.post('/import-excel', [validarToken, validarRol], usuario.importExcel)
 router.get('/', [validarToken, validarRol], usuario.getAll)
 router.post('/', [validarToken, validarRol], usuario.create)
 router.get('/:id', [validarToken, validarRol], usuario.get)

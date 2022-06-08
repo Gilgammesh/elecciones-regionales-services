@@ -2,27 +2,28 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
+import { join } from 'path'
 import { Error } from 'mongoose'
 import { UploadedFile } from 'express-fileupload'
 import xlsxFile from 'read-excel-file/node'
 import { Row } from 'read-excel-file/types'
-import CentroVotacion, { ICentroVotacion } from '../models/centro_votacion'
-import Departamento, { IDepartamento } from '../models/ubigeo/departamento'
-import Provincia, { IProvincia } from '../models/ubigeo/provincia'
-import Distrito, { IDistrito } from '../models/ubigeo/distrito'
+import Mesa, { IMesa } from '../../models/centro_votacion/mesa'
+import Departamento, { IDepartamento } from '../../models/ubigeo/departamento'
+import Provincia, { IProvincia } from '../../models/ubigeo/provincia'
+import Distrito, { IDistrito } from '../../models/ubigeo/distrito'
 import _ from 'lodash'
-import { storeFile } from '../helpers/upload'
-import { saveLog } from './admin/log.controller'
-import { parseNewDate24H_ } from '../helpers/date'
-import { getPage, getPageSize, getTotalPages } from '../helpers/pagination'
-import { eventsLogs } from '../models/admin/log'
+import { storeFile } from '../../helpers/upload'
+import { saveLog } from '../admin/log.controller'
+import { parseNewDate24H_ } from '../../helpers/date'
+import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
+import { eventsLogs } from '../../models/admin/log'
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
 const nombre_modulo: string = 'centros-votacion'
-const nombre_submodulo: string = ''
-const nombre_controlador: string = 'centro_votacion.controller'
+const nombre_submodulo: string = 'mesas'
+const nombre_controlador: string = 'mesa.controller'
 const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -30,38 +31,38 @@ const pagination = {
 }
 
 /*******************************************************************************************************/
-// Obtener todos los centros de votación //
+// Obtener todas las mesas de votación //
 /*******************************************************************************************************/
 export const getAll: Handler = async (req, res) => {
   // Leemos el usuario y el query de la petición
   const { usuario, query } = req
 
   try {
-    // Definimos el query para los centros de votación
-    let queryCentros = {}
+    // Definimos el query para las mesas de votación
+    let queryMesas = {}
 
     // Añadimos el año
-    queryCentros = { ...queryCentros, anho: usuario.anho }
+    queryMesas = { ...queryMesas, anho: usuario.anho }
     // Si es un superusuario
     if (usuario.rol.super) {
       // Filtramos por el query de departamento
       if (query.departamento && query.departamento !== 'todos') {
-        queryCentros = {
-          ...queryCentros,
+        queryMesas = {
+          ...queryMesas,
           ubigeo: { $regex: `^${query.departamento}.*` }
         }
       }
       // Filtramos por el query de provincia
       if (query.provincia && query.provincia !== 'todos') {
-        queryCentros = {
-          ...queryCentros,
+        queryMesas = {
+          ...queryMesas,
           ubigeo: { $regex: `^${query.departamento}${query.provincia}.*` }
         }
       }
       // Filtramos por el query de distrito
       if (query.distrito && query.distrito !== 'todos') {
-        queryCentros = {
-          ...queryCentros,
+        queryMesas = {
+          ...queryMesas,
           ubigeo: {
             $regex: `^${query.departamento}${query.provincia}${query.distrito}.*`
           }
@@ -69,14 +70,14 @@ export const getAll: Handler = async (req, res) => {
       }
     } else {
       // Filtramos por los que no son superusuarios
-      queryCentros = {
-        ...queryCentros,
+      queryMesas = {
+        ...queryMesas,
         ubigeo: { $regex: `^${usuario.departamento?.codigo}.*` }
       }
       // Filtramos por el query de provincia
       if (query.provincia && query.provincia !== 'todos') {
-        queryCentros = {
-          ...queryCentros,
+        queryMesas = {
+          ...queryMesas,
           ubigeo: {
             $regex: `^${usuario.departamento?.codigo}${query.provincia}.*`
           }
@@ -84,8 +85,8 @@ export const getAll: Handler = async (req, res) => {
       }
       // Filtramos por el query de distrito
       if (query.distrito && query.distrito !== 'todos') {
-        queryCentros = {
-          ...queryCentros,
+        queryMesas = {
+          ...queryMesas,
           ubigeo: {
             $regex: `^${usuario.departamento?.codigo}${query.provincia}${query.distrito}.*`
           }
@@ -94,23 +95,21 @@ export const getAll: Handler = async (req, res) => {
     }
     // Filtramos por el query de local
     if (query.local && query.local !== 'todos') {
-      queryCentros = {
-        ...queryCentros,
+      queryMesas = {
+        ...queryMesas,
         nombre: query.local
       }
     }
     // Filtramos por el query de mesa
     if (query.mesa && query.mesa !== 'todos') {
-      queryCentros = {
-        ...queryCentros,
+      queryMesas = {
+        ...queryMesas,
         mesa: query.mesa
       }
     }
 
-    // Intentamos obtener el total de registros de centros de votación
-    const totalRegistros: number = await CentroVotacion.find(
-      queryCentros
-    ).count()
+    // Intentamos obtener el total de registros de mesas de votación
+    const totalRegistros: number = await Mesa.find(queryMesas).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
     const validatePageSize: any = await getPageSize(
@@ -143,14 +142,13 @@ export const getAll: Handler = async (req, res) => {
     const page = validatePage.page
 
     // Intentamos realizar la búsqueda de todos los centros de votación paginados
-    const list: Array<ICentroVotacion> = await CentroVotacion.find(
-      queryCentros,
-      exclude_campos
-    )
+    const list: Array<IMesa> = await Mesa.find(queryMesas, exclude_campos)
       .sort({ ubigeo: 'asc', mesa: 'asc' })
       .populate('departamento', exclude_campos)
       .populate('provincia', exclude_campos)
       .populate('distrito', exclude_campos)
+      .populate('personero_provincia', exclude_campos)
+      .populate('personero_distrito', exclude_campos)
       .populate('personero_local', exclude_campos)
       .populate('personero_mesa', exclude_campos)
       .collation({ locale: 'es', numericOrdering: true })
@@ -170,59 +168,60 @@ export const getAll: Handler = async (req, res) => {
     // Mostramos el error en consola
     console.log(
       'Centros de Votación',
-      'Obteniendo la lista de centros de votación',
+      'Obteniendo la lista de mesas de votación',
       error
     )
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo obtener los centros de votación'
+      msg: 'No se pudo obtener las mesas de votación'
     })
   }
 }
 
 /*******************************************************************************************************/
-// Obtener datos de un centro de votación //
+// Obtener datos de una mesa de votación //
 /*******************************************************************************************************/
 export const get: Handler = async (req, res) => {
   // Leemos los parámetros de la petición
   const { params } = req
-  // Obtenemos el Id del centro de votación
+  // Obtenemos el Id de la mesa de votación
   const { id } = params
 
   try {
     // Intentamos realizar la búsqueda por id
-    const centro_votacion: ICentroVotacion | null =
-      await CentroVotacion.findById(id, exclude_campos)
-        .populate('departamento', exclude_campos)
-        .populate('provincia', exclude_campos)
-        .populate('distrito', exclude_campos)
-        .populate('personero_local', exclude_campos)
-        .populate('personero_mesa', exclude_campos)
+    const mesa: IMesa | null = await Mesa.findById(id, exclude_campos)
+      .populate('departamento', exclude_campos)
+      .populate('provincia', exclude_campos)
+      .populate('distrito', exclude_campos)
+      .populate('personero_provincia', exclude_campos)
+      .populate('personero_distrito', exclude_campos)
+      .populate('personero_local', exclude_campos)
+      .populate('personero_mesa', exclude_campos)
 
-    // Retornamos los datos del centro de votación encontrado
+    // Retornamos los datos de la mesa de votación encontrada
     return res.json({
       status: true,
-      centro_votacion
+      mesa
     })
   } catch (error) {
     // Mostramos el error en consola
     console.log(
       'Centros de Votación',
-      'Obteniendo datos de centro de votación',
+      'Obteniendo datos de mesa de votación',
       id,
       error
     )
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo obtener los datos del centro de votación'
+      msg: 'No se pudo obtener los datos de la mesa de votación'
     })
   }
 }
 
 /*******************************************************************************************************/
-// Crear un nuevo centro de votación //
+// Crear una nueva mesa de votación //
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, el cuerpo y los archivos de la petición
@@ -232,7 +231,20 @@ export const create: Handler = async (req, res) => {
   const { source, origin, ip, device, browser } = headers
 
   try {
-    // Inicializamos el código de departament
+    // Verificamos si ya existe la mesa de votación
+    const mesaU = await Mesa.findOne({
+      mesa: body.mesa,
+      anho: usuario.anho
+    })
+    //
+    if (mesaU) {
+      return res.status(404).json({
+        status: false,
+        msg: `Ya existe la mesa de votación para estas elecciones ${usuario.anho}`
+      })
+    }
+
+    // Inicializamos el código de departamento
     let codDpto: string | undefined = ''
     // Si no es un superusuario
     if (usuario.rol.super) {
@@ -259,8 +271,8 @@ export const create: Handler = async (req, res) => {
       departamento: codDpto
     })
 
-    // Creamos el modelo de un nuevo centro de votacion
-    const newCentroVotacion: ICentroVotacion = new CentroVotacion({
+    // Creamos el modelo de una nueva mesa de votacion
+    const newMesa: IMesa = new Mesa({
       ubigeo: distrito?.ubigeo,
       departamento: departamento?._id,
       provincia: provincia?._id,
@@ -273,8 +285,8 @@ export const create: Handler = async (req, res) => {
       anho: usuario.anho
     })
 
-    // Intentamos guardar el nuevo centro de votación
-    const centroVotacionOut: ICentroVotacion = await newCentroVotacion.save()
+    // Intentamos guardar la nueva mesa de votación
+    const mesaOut: IMesa = await newMesa.save()
 
     // Guardamos el log del evento
     await saveLog({
@@ -288,37 +300,39 @@ export const create: Handler = async (req, res) => {
       submodulo: nombre_submodulo,
       controller: nombre_controlador,
       funcion: 'create',
-      descripcion: 'Crear nuevo centro de votación',
+      descripcion: 'Crear nueva mesa de votación',
       evento: eventsLogs.create,
       data_in: '',
-      data_out: JSON.stringify(centroVotacionOut, null, 2),
+      data_out: JSON.stringify(mesaOut, null, 2),
       procesamiento: 'unico',
       registros: 1,
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Obtenemos el centro de votación creado
-    const centroVotacionResp: ICentroVotacion | null =
-      await CentroVotacion.findById(centroVotacionOut._id, exclude_campos)
+    // Obtenemos la mesa de votación creada
+    const mesaResp: IMesa | null = await Mesa.findById(
+      mesaOut._id,
+      exclude_campos
+    )
 
     // Si existe un socket
     if (globalThis.socketIO) {
-      // Emitimos el evento => centro de votación creado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centro-votacion-creado')
+      // Emitimos el evento => mesa de votación creada en el módulo centros de votación, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('centros-votacion-mesa-creada')
     }
 
-    // Retornamos el centro de votación creado
+    // Retornamos la mesa de votación creada
     return res.json({
       status: true,
-      msg: 'Se creó el centro de votación correctamente',
-      centro_votacion: centroVotacionResp
+      msg: 'Se creó la mesa de votación correctamente',
+      mesa: mesaResp
     })
   } catch (error: Error | any) {
     // Mostramos el error en consola
-    console.log('Centros de Votación', 'Crear nuevo centro de votación', error)
+    console.log('Centros de Votación', 'Crear nueva mesa de votación', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el centro de votación'
+    let msg: string = 'No se pudo crear la mesa de votación'
     // Si existe un error con validación de campo único
     if (error?.errors) {
       // Obtenemos el array de errores
@@ -338,29 +352,27 @@ export const create: Handler = async (req, res) => {
 }
 
 /*******************************************************************************************************/
-// Actualizar los datos de un centro de votación //
+// Actualizar los datos de una mesa de votación //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
   const { headers, usuario, params, query, body } = req
-  // Obtenemos el Id del centro de votación
+  // Obtenemos el Id de la mesa de votación
   const { id } = params
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
   const { source, origin, ip, device, browser } = headers
 
   try {
-    // Intentamos obtener el centro de votación antes que se actualice
-    const centroVotacionIn: ICentroVotacion | null =
-      await CentroVotacion.findById(id)
+    // Intentamos obtener la mesa de votación antes que se actualice
+    const mesaIn: IMesa | null = await Mesa.findById(id)
 
     // Intentamos realizar la búsqueda por id y actualizamos
-    const centroVotacionOut: ICentroVotacion | null =
-      await CentroVotacion.findByIdAndUpdate(id, body, {
-        new: true,
-        runValidators: true,
-        context: 'query'
-      })
+    const mesaOut: IMesa | null = await Mesa.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+      context: 'query'
+    })
 
     // Guardamos el log del evento
     await saveLog({
@@ -374,42 +386,41 @@ export const update: Handler = async (req, res) => {
       submodulo: nombre_submodulo,
       controller: nombre_controlador,
       funcion: 'update',
-      descripcion: 'Actualizar un centro de votación',
+      descripcion: 'Actualizar una mesa de votación',
       evento: eventsLogs.update,
-      data_in: JSON.stringify(centroVotacionIn, null, 2),
-      data_out: JSON.stringify(centroVotacionOut, null, 2),
+      data_in: JSON.stringify(mesaIn, null, 2),
+      data_out: JSON.stringify(mesaOut, null, 2),
       procesamiento: 'unico',
       registros: 1,
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Obtenemos el centro de votación actualizado
-    const centroVotacionResp: ICentroVotacion | null =
-      await CentroVotacion.findById(id, exclude_campos)
+    // Obtenemos la mesa de votación actualizada
+    const mesaResp: IMesa | null = await Mesa.findById(id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
-      // Emitimos el evento => centro de votación actualizado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centro-votacion-actualizado')
+      // Emitimos el evento => mesa de votación actualizada en el módulo centros de votación, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('centros-votacion-mesa-actualizada')
     }
 
-    // Retornamos el centro de votación actualizado
+    // Retornamos la mesa de votación actualizada
     return res.json({
       status: true,
-      msg: 'Se actualizó el centro de votación correctamente',
-      centro_votacion: centroVotacionResp
+      msg: 'Se actualizó la mesa de votación correctamente',
+      mesa: mesaResp
     })
   } catch (error: Error | any) {
     // Mostramos el error en consola
     console.log(
       'Centros de Votación',
-      'Actualizando centro de votación',
+      'Actualizando mesa de votación',
       id,
       error
     )
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos del centro de votación'
+    let msg: string = 'No se pudo actualizar los datos de la mesa de votación'
     // Si existe un error con validación de campo único
     if (error?.errors) {
       // Obtenemos el array de errores
@@ -429,25 +440,23 @@ export const update: Handler = async (req, res) => {
 }
 
 /*******************************************************************************************************/
-// Eliminar un centro de votación //
+// Eliminar una mesa de votación //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros y el query de la petición
   const { headers, usuario, params, query } = req
-  // Obtenemos el Id del centro de votación
+  // Obtenemos el Id de la mesa de votación
   const { id } = params
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
   const { source, origin, ip, device, browser } = headers
 
   try {
-    // Obtenemos el centro de votación antes que se elimine
-    const centroVotacionResp: ICentroVotacion | null =
-      await CentroVotacion.findById(id, exclude_campos)
+    // Obtenemos la mesa de votación antes que se elimine
+    const mesaResp: IMesa | null = await Mesa.findById(id, exclude_campos)
 
     // Intentamos realizar la búsqueda por id y removemos
-    const centroVotacionIn: ICentroVotacion | null =
-      await CentroVotacion.findByIdAndRemove(id)
+    const mesaIn: IMesa | null = await Mesa.findByIdAndRemove(id)
 
     // Guardamos el log del evento
     await saveLog({
@@ -461,9 +470,9 @@ export const remove: Handler = async (req, res) => {
       submodulo: nombre_submodulo,
       controller: nombre_controlador,
       funcion: 'remove',
-      descripcion: 'Remover un centro de votación',
+      descripcion: 'Remover una mesa de votación',
       evento: eventsLogs.remove,
-      data_in: JSON.stringify(centroVotacionIn, null, 2),
+      data_in: JSON.stringify(mesaIn, null, 2),
       data_out: '',
       procesamiento: 'unico',
       registros: 1,
@@ -472,28 +481,23 @@ export const remove: Handler = async (req, res) => {
 
     // Si existe un socket
     if (globalThis.socketIO) {
-      // Emitimos el evento => centro de votación eliminado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centro-votacion-eliminado')
+      // Emitimos el evento => mesa de votación eliminada en el módulo centros de votación, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('centros-votacion-mesa-eliminada')
     }
 
-    // Retornamos el centro de votación eliminado
+    // Retornamos la mesa de votación eliminada
     return res.json({
       status: true,
-      msg: 'Se eliminó el centro de votación correctamente',
-      centro_votacion: centroVotacionResp
+      msg: 'Se eliminó la mesa de votación correctamente',
+      mesa: mesaResp
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Eliminando centro de votación',
-      id,
-      error
-    )
+    console.log('Centros de Votación', 'Eliminando mesa de votación', id, error)
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo eliminar el centro de votación'
+      msg: 'No se pudo eliminar la mesa de votación'
     })
   }
 }
@@ -507,7 +511,7 @@ interface IMsgError {
 }
 
 /*******************************************************************************************************/
-// Procesar archivo excel de centros de votación //
+// Procesar archivo excel de mesas de votación //
 /*******************************************************************************************************/
 export const importExcel: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario y los archivos de la petición
@@ -522,14 +526,14 @@ export const importExcel: Handler = async (req, res) => {
       // Guardamos el archivo localmente para recorrerlo y obtenemos la ruta
       const pathFile: string = await storeFile(
         <UploadedFile>files.file,
-        'centros-votacion',
+        join('centros-votacion', 'mesas'),
         'temp'
       )
 
       // Obtenemos las filas de la plantilla de excel
       const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
 
-      // Inicializamos el array de mensjaes de errores
+      // Inicializamos el array de mensajes de error
       let msgError: IMsgError[] = []
 
       // Establecemos la fila de inicio
@@ -546,9 +550,10 @@ export const importExcel: Handler = async (req, res) => {
             row,
             index,
             usuario.departamento ? usuario.departamento?.codigo : '',
-            usuario.rol.super
+            usuario.rol.super,
+            usuario.anho
           )
-          // Si pasó las pruebas de valicación, guardamos los datos del centro de votación
+          // Si pasó las pruebas de valicación, guardamos los datos de la mesa de votación
           if (msg === 'ok') {
             // Obtenemos los datos del departamento si existe
             const departamento: IDepartamento | null =
@@ -567,21 +572,20 @@ export const importExcel: Handler = async (req, res) => {
               departamento: `${row[0]}`.substring(0, 2)
             })
 
-            // Creamos el modelo de un nuevo centro de votacion
-            const newCentroVotacion: ICentroVotacion = new CentroVotacion({
+            // Creamos el modelo de una nueva mesa de votacion
+            const newMesa: IMesa = new Mesa({
               ubigeo: `${row[0]}`,
               departamento: departamento?._id,
               provincia: provincia?._id,
               distrito: distrito?._id,
-              nombre: `${row[4]}`.trim(),
+              local: `${row[4]}`.trim(),
               mesa: `${row[5]}`,
               ...(row[6] && { votantes: parseInt(`${row[6]}`, 10) }),
               anho: usuario.anho
             })
 
-            // Intentamos guardar el nuevo centro de votación
-            const centroVotacionOut: ICentroVotacion =
-              await newCentroVotacion.save()
+            // Intentamos guardar la nueva mesa de votación
+            const mesaOut: IMesa = await newMesa.save()
 
             // Guardamos el log del evento
             await saveLog({
@@ -595,10 +599,10 @@ export const importExcel: Handler = async (req, res) => {
               submodulo: nombre_submodulo,
               controller: nombre_controlador,
               funcion: 'create',
-              descripcion: 'Crear nuevo centro de votación por excel importado',
+              descripcion: 'Crear nueva mesa de votación por excel importado',
               evento: eventsLogs.create,
               data_in: '',
-              data_out: JSON.stringify(centroVotacionOut, null, 2),
+              data_out: JSON.stringify(mesaOut, null, 2),
               procesamiento: 'masivo',
               registros: 1,
               id_grupo
@@ -614,8 +618,8 @@ export const importExcel: Handler = async (req, res) => {
 
       // Si existe un socket
       if (globalThis.socketIO) {
-        // Emitimos el evento => centros de votación importados en el módulo centros de votación, a todos los usuarios conectados //
-        globalThis.socketIO.broadcast.emit('centros-votacion-importados')
+        // Emitimos el evento => mesas de votación importados en el módulo centros de votación, a todos los usuarios conectados //
+        globalThis.socketIO.broadcast.emit('centros-votacion-mesas-importadas')
       }
 
       // Retornamos el detalle de los mensajes de error si existen
@@ -625,24 +629,29 @@ export const importExcel: Handler = async (req, res) => {
       })
     } catch (error) {
       // Mostramos el error en consola
-      console.log('Centros de Votación', 'Importando Excel', error)
+      console.log(
+        'Centros de Votación',
+        'Importando Excel de Mesas de Votación',
+        error
+      )
       // Retornamos
       return res.status(404).json({
         status: false,
-        msg: 'No se pudo subir el archivo excel. Consulte con el administrador del Sistema!!'
+        msg: 'No se pudo subir el archivo excel de mesas de votación.'
       })
     }
   }
 }
 
 /*******************************************************************************************************/
-// Función para validar los campos del excel de centros de votación //
+// Función para validar los campos del excel de mesas de votación //
 /*******************************************************************************************************/
 const validateFields = async (
   row: Row,
   index: number,
   codigo: string,
-  superUser: boolean
+  superUser: boolean,
+  anho: number | undefined
 ) => {
   // Validamos que el ubigeo no esté vacio
   if (`${row[0]}` === '' || row[0] === null) {
@@ -650,7 +659,7 @@ const validateFields = async (
   }
   // Validamos que el nombre del centro de votación no esté vacio
   if (`${row[4]}` === '' || row[4] === null) {
-    return `Fila ${index}: El campo nombre centro votación no puede estar vacio`
+    return `Fila ${index}: El campo local no puede estar vacio`
   }
   // Validamos que el número de mesa no esté vacio
   if (`${row[5]}` === '' || row[5] === null) {
@@ -701,20 +710,20 @@ const validateFields = async (
   if (!distrito) {
     return `Fila ${index}: El distrito ${`${row[0]}`.substring(4, 6)} no existe`
   }
-  // Obtenemos los datos del número de mesa si existe
-  const centro_votacion: ICentroVotacion | null = await CentroVotacion.findOne({
-    mesa: `${row[5]}`
+  // Si existe un número de mesa para el anho
+  const mesaU: IMesa | null = await Mesa.findOne({
+    mesa: `${row[5]}`,
+    anho
   })
-  // Si existen un centro de votación con el número de mesa
-  if (centro_votacion) {
-    return `Fila ${index}: El número de mesa ${row[5]}, se encuentra registrado`
+  if (mesaU) {
+    return `Fila ${index}: El número de mesa ${row[5]}, ya se encuentra registrado para estas elecciones ${anho}`
   }
   // Si pasó todas las validaciones
   return 'ok'
 }
 
 /*******************************************************************************************************/
-// Obtener todos los locales //
+// Obtener todos los locales de votación (resumido) //
 /*******************************************************************************************************/
 export const getLocales: Handler = async (req, res) => {
   // Leemos el usuario y el query de la petición
@@ -778,7 +787,7 @@ export const getLocales: Handler = async (req, res) => {
     }
 
     // Intentamos realizar la búsqueda de todos los locales agrupados
-    const list: Array<ICentroVotacion> = await CentroVotacion.aggregate([
+    const list: Array<IMesa> = await Mesa.aggregate([
       { $match: queryLocales },
       { $group: { _id: '$nombre' } },
       { $sort: { _id: 1 } }
@@ -791,17 +800,21 @@ export const getLocales: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Centros de Votación', 'Obteniendo la lista de locales', error)
+    console.log(
+      'Centros de Votación',
+      'Obteniendo la lista de locales de votación',
+      error
+    )
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo obtener los locales'
+      msg: 'No se pudo obtener los locales de votación'
     })
   }
 }
 
 /*******************************************************************************************************/
-// Obtener todas las mesas //
+// Obtener todas las mesas de votación (resumido) //
 /*******************************************************************************************************/
 export const getMesas: Handler = async (req, res) => {
   // Leemos el usuario y el query de la petición
@@ -872,7 +885,7 @@ export const getMesas: Handler = async (req, res) => {
     }
 
     // Intentamos realizar la búsqueda de todos las mesas agrupadas
-    const list: Array<ICentroVotacion> = await CentroVotacion.aggregate([
+    const list: Array<IMesa> = await Mesa.aggregate([
       { $match: queryMesas },
       { $group: { _id: '$mesa' } },
       { $sort: { _id: 1 } }
@@ -885,11 +898,15 @@ export const getMesas: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Centros de Votación', 'Obteniendo la lista de mesas', error)
+    console.log(
+      'Centros de Votación',
+      'Obteniendo la lista de mesas de votación',
+      error
+    )
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo obtener las mesas'
+      msg: 'No se pudo obtener las mesas de votación'
     })
   }
 }
