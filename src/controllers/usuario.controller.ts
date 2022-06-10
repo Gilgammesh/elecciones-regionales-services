@@ -321,7 +321,7 @@ export const update: Handler = async (req, res) => {
     }
 
     // Si la contraseña es nula
-    if (body.password === 'null') {
+    if (!body.password || body.password === 'null') {
       // Usamos la contraseña actual
       body.password = usuarioIn ? usuarioIn.password : ''
     } else {
