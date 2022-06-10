@@ -62,7 +62,6 @@
     "@types/moment": "^2.13.0",
     "@types/moment-timezone": "^0.5.30",
     "@types/mongoose": "^5.11.97",
-    "@types/mongoose-unique-validator": "^1.0.5",
     "@types/morgan": "^1.9.3",
     "@types/node": "^16.11.6",
     "@types/node-fetch": "^2.5.12",
