@@ -4,7 +4,7 @@
 import { Router } from 'express'
 import { validarToken } from '../middlewares/authentication'
 import * as auth from '../controllers/auth/auth.controller'
-import * as clave from '../controllers/auth/clave.controller'
+import * as password from '../controllers/auth/password.controller'
 import * as token from '../controllers/auth/token.controller'
 
 /*******************************************************************************************************/
@@ -25,7 +25,7 @@ router.post('/logout', validarToken, auth.logout)
 router.post('/token', token.generate)
 
 // Clave
-router.put('/cambiar-clave', validarToken, clave.update)
+router.post('/cambiar-password', validarToken, password.update)
 
 /*******************************************************************************************************/
 // Exportamos las rutas definidas en router por defecto //

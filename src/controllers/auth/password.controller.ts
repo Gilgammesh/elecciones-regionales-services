@@ -13,11 +13,11 @@ import { eventsLogs } from '../../models/admin/log'
 // Variables generales del Controlador //
 /*******************************************************************************************************/
 const nombre_modulo: string = 'auth'
-const nombre_submodulo: string = 'clave'
-const nombre_controlador: string = 'clave.controller'
+const nombre_submodulo: string = 'password'
+const nombre_controlador: string = 'password.controller'
 
 /*******************************************************************************************************/
-// Actualizar la clave de un usuario desde la intranet //
+// Actualizar la contraseña de un usuario desde la intranet //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario , los parámetros y el cuerpo de la petición
@@ -74,7 +74,7 @@ export const update: Handler = async (req, res) => {
             submodulo: nombre_submodulo,
             controller: nombre_controlador,
             funcion: 'update',
-            descripcion: 'Actualizar clave de usuario desde la intranet',
+            descripcion: 'Actualizar contraseña de usuario desde la intranet',
             evento: eventsLogs.update,
             data_in: JSON.stringify(usuarioIn, null, 2),
             data_out: JSON.stringify(usuarioOut, null, 2),
@@ -86,7 +86,7 @@ export const update: Handler = async (req, res) => {
           // Retornamos la confirmación de la actualización
           return res.json({
             status: true,
-            msg: 'Se actualizó la clave del usuario correctamente'
+            msg: 'Se actualizó la contraseña del usuario correctamente'
           })
         }
       }
@@ -101,11 +101,16 @@ export const update: Handler = async (req, res) => {
     }
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Auth', 'Actualizando clave de usuario', usuario._id, error)
+    console.log(
+      'Auth',
+      'Actualizando contraseña de usuario',
+      usuario._id,
+      error
+    )
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo actualizar la clave del usuario'
+      msg: 'No se pudo actualizar la contraseña del usuario'
     })
   }
 }
