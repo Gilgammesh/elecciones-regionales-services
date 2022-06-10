@@ -97,7 +97,7 @@ export const getAll: Handler = async (req, res) => {
     if (query.local && query.local !== 'todos') {
       queryMesas = {
         ...queryMesas,
-        nombre: query.local
+        local: query.local
       }
     }
     // Filtramos por el query de mesa
@@ -789,7 +789,7 @@ export const getLocales: Handler = async (req, res) => {
     // Intentamos realizar la búsqueda de todos los locales agrupados
     const list: Array<IMesa> = await Mesa.aggregate([
       { $match: queryLocales },
-      { $group: { _id: '$nombre' } },
+      { $group: { _id: '$local' } },
       { $sort: { _id: 1 } }
     ])
 
@@ -880,7 +880,7 @@ export const getMesas: Handler = async (req, res) => {
     if (query.local && query.local !== 'todos') {
       queryMesas = {
         ...queryMesas,
-        nombre: query.local
+        local: query.local
       }
     }
 

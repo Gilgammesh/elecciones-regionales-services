@@ -6,11 +6,12 @@ import { join } from 'path'
 import { Error } from 'mongoose'
 import { UploadedFile } from 'express-fileupload'
 import Personero, { IPersonero } from '../../models/centro_votacion/personero'
+import Mesa from '../../models/centro_votacion/mesa'
 import xlsxFile from 'read-excel-file/node'
 import { Row } from 'read-excel-file/types'
 import _ from 'lodash'
 import encrypt from '../../helpers/encrypt'
-import { getUrlFile, storeFile, removeFile } from '../../helpers/upload'
+import { storeFile } from '../../helpers/upload'
 import { parseNewDate24H_ } from '../../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
 import { saveLog } from '../admin/log.controller'
@@ -57,11 +58,55 @@ export const getAll: Handler = async (req, res) => {
         departamento: usuario.departamento?._id
       }
     }
-    // Filtramos por el query de tipo de personero
-    if (query.tipo && query.tipo !== 'todos') {
-      queryPersoneros = {
-        ...queryPersoneros,
-        tipo: query.tipo
+    // Si existe un query de búsqueda
+    if (query.searchTipo && query.searchTipo !== '') {
+      if (query.searchTipo === 'nombres') {
+        const searchValueParts = (query.searchValue as string).split(',')
+        queryPersoneros = {
+          ...queryPersoneros,
+          nombres: {
+            $regex: `.*${searchValueParts[0].trim()}.*`,
+            $options: 'i'
+          },
+          apellidos: {
+            $regex: `.*${searchValueParts[1].trim()}.*`,
+            $options: 'i'
+          }
+        }
+      }
+      if (query.searchTipo === 'dni') {
+        queryPersoneros = {
+          ...queryPersoneros,
+          dni: {
+            $regex: `.*${query.searchValue as string}.*`,
+            $options: 'i'
+          }
+        }
+      }
+      if (query.searchTipo === 'celular') {
+        queryPersoneros = {
+          ...queryPersoneros,
+          celular: {
+            $regex: `.*${query.searchValue as string}.*`,
+            $options: 'i'
+          }
+        }
+      }
+    } else {
+      if (query.estado && query.estado !== 'todos') {
+        // Filtramos por el query de estado de personero
+        console.log(query.estado)
+        queryPersoneros = {
+          ...queryPersoneros,
+          estado: query.estado
+        }
+      }
+      // Filtramos por el query de tipo de personero
+      if (query.tipo && query.tipo !== 'todos') {
+        queryPersoneros = {
+          ...queryPersoneros,
+          tipo: query.tipo
+        }
       }
     }
 
@@ -172,8 +217,8 @@ export const get: Handler = async (req, res) => {
 // Crear un nuevo personero //
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario, el cuerpo y los archivos de la petición
-  const { headers, usuario, body, files } = req
+  // Leemos las cabeceras, el usuario y el cuerpo de la petición
+  const { headers, usuario, body } = req
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
   const { source, origin, ip, device, browser } = headers
@@ -279,7 +324,7 @@ export const create: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, query, body, files } = req
+  const { headers, usuario, params, body } = req
   // Obtenemos el Id del personero
   const { id } = params
 
@@ -290,8 +335,23 @@ export const update: Handler = async (req, res) => {
     // Intentamos obtener el personero antes que se actualice
     const personeroIn: IPersonero | null = await Personero.findById(id)
 
+    if (personeroIn && personeroIn.dni !== body.dni) {
+      // Verificamos si ya existe el personero
+      const personeroU = await Personero.findOne({
+        dni: body.dni,
+        anho: usuario.anho
+      })
+      //
+      if (personeroU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe un personero con este DNI para estas elecciones ${usuario.anho}`
+        })
+      }
+    }
+
     // Si la contraseña es nula
-    if (body.password === 'null') {
+    if (!body.password || body.password === 'null') {
       // Usamos la contraseña actual
       body.password = personeroIn ? personeroIn.password : ''
     } else {
@@ -397,6 +457,23 @@ export const remove: Handler = async (req, res) => {
 
     // Intentamos realizar la búsqueda por id y removemos
     const personeroIn: IPersonero | null = await Personero.findByIdAndRemove(id)
+    // Removemos el personero de la mesa, local, provincia o distrito
+    await Mesa.updateMany(
+      { personero_mesa: id },
+      { $unset: { personero_mesa: 1 } }
+    )
+    await Mesa.updateMany(
+      { personero_local: id },
+      { $unset: { personero_local: 1 } }
+    )
+    await Mesa.updateMany(
+      { personero_distrito: id },
+      { $unset: { personero_distrito: 1 } }
+    )
+    await Mesa.updateMany(
+      { personero_provincia: id },
+      { $unset: { personero_provincia: 1 } }
+    )
 
     // Guardamos el log del evento
     await saveLog({
@@ -454,8 +531,8 @@ interface IMsgError {
 // Procesar archivo excel de personeros //
 /*******************************************************************************************************/
 export const importExcel: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario y los archivos de la petición
-  const { headers, usuario, files } = req
+  // Leemos las cabeceras, el usuario, el query y los archivos de la petición
+  const { headers, usuario, query, files } = req
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
   const { source, origin, ip, device, browser } = headers
@@ -470,6 +547,13 @@ export const importExcel: Handler = async (req, res) => {
         'temp'
       )
 
+      let dptoId: string
+      if (usuario.rol.super) {
+        dptoId = query.departamento as string
+      } else {
+        dptoId = usuario.departamento?._id as string
+      }
+
       // Obtenemos las filas de la plantilla de excel
       const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
 
@@ -482,13 +566,32 @@ export const importExcel: Handler = async (req, res) => {
       // Establecemos el id de grupo de log
       let id_grupo: string = `${usuario._id}@${parseNewDate24H_()}`
 
-      // Recorremos las filas y guardamos cada fila previamente validada
-      const promises = rows.map(async (row, index) => {
-        // Si el el index es mayor o igual al fila de inicio
+      // Recorremos las filas para ver si hay errores
+      const promises1 = rows.map(async (row, index) => {
+        // Si el index es mayor o igual al fila de inicio
         if (index >= rowStart) {
           const msg = await validateFields(row, index, usuario.anho)
-          // Si pasó las pruebas de validación, guardamos los datos del personero
-          if (msg === 'ok') {
+          // Si no pasó las validaciones
+          if (msg !== 'ok') {
+            // Guardamos el mensaje de error en el array de mensajes
+            msgError.push({ index, msg })
+          }
+        }
+        return null
+      })
+      await Promise.all(promises1)
+
+      // Si hubo errores retornamos el detalle de los mensajes de error
+      if (msgError.length > 0) {
+        return res.json({
+          status: true,
+          errores: _.orderBy(msgError, ['index'], ['asc'])
+        })
+      } else {
+        // Si no hubo errores, recorremos las filas y guardamos
+        const promises2 = rows.map(async (row, index) => {
+          // Si el el index es mayor o igual al fila de inicio
+          if (index >= rowStart) {
             // Encriptamos la contraseña personalizada, antes de guardarla
             const iniNo = `${row[0]}`.trim().slice(0, 1).toLocaleUpperCase()
             const iniAp = `${row[1]}`.trim().slice(0, 1).toLocaleUpperCase()
@@ -503,9 +606,7 @@ export const importExcel: Handler = async (req, res) => {
               dni: `${row[2]}`,
               celular: `${row[3]}`,
               password: pwdEncrypted,
-              departamento: usuario.departamento
-                ? usuario.departamento?._id
-                : req.body.departamento,
+              departamento: dptoId,
               anho: usuario.anho
             })
 
@@ -532,28 +633,24 @@ export const importExcel: Handler = async (req, res) => {
               registros: 1,
               id_grupo
             })
-          } else {
-            // Guardamos el mensaje de error en el array de mensajes
-            msgError.push({ index, msg })
           }
+          return null
+        })
+        await Promise.all(promises2)
+
+        // Si existe un socket
+        if (globalThis.socketIO) {
+          // Emitimos el evento => personeros importados en el módulo centro de votación, a todos los usuarios conectados //
+          globalThis.socketIO.broadcast.emit(
+            'centros-votacion-personeros-importados'
+          )
         }
-        return null
-      })
-      await Promise.all(promises)
 
-      // Si existe un socket
-      if (globalThis.socketIO) {
-        // Emitimos el evento => personeros importados en el módulo centro de votación, a todos los usuarios conectados //
-        globalThis.socketIO.broadcast.emit(
-          'centros-votacion-personeros-importados'
-        )
+        // Retornamos el detalle de los mensajes de error si existen
+        return res.json({
+          status: true
+        })
       }
-
-      // Retornamos el detalle de los mensajes de error si existen
-      return res.json({
-        status: true,
-        errores: _.orderBy(msgError, ['index'], ['asc'])
-      })
     } catch (error) {
       // Mostramos el error en consola
       console.log(

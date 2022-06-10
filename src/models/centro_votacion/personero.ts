@@ -15,8 +15,9 @@ export interface IPersonero extends Document {
   celular: string
   password: string
   departamento?: PopulatedDoc<IDepartamento>
+  asignado: boolean
   tipo: string
-  label: string
+  asignadoA: string
   anho: number
   estado: boolean
   createdAt: Date
@@ -76,20 +77,19 @@ const PersoneroSchema: Schema = new Schema(
       ref: 'UbigeoDepartamento',
       type: Schema.Types.ObjectId
     },
+    asignado: {
+      type: Boolean,
+      default: false
+    },
     tipo: {
       type: String,
-      required: [true, 'El tipo es requerido'],
       enum: {
         values: ['mesa', 'local', 'distrito', 'provincia'],
         message:
           '{VALUE}, no es un tipo válido. Elija entre: mesa | local | distrito | provincia'
-      },
-      default: 'mesa'
+      }
     },
-    label: {
-      type: String,
-      default: ''
-    },
+    asignadoA: String,
     anho: {
       type: Number,
       required: [true, 'El año es requerido']
