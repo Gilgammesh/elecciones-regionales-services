@@ -7,6 +7,7 @@ import { Error } from 'mongoose'
 import { UploadedFile } from 'express-fileupload'
 import xlsxFile from 'read-excel-file/node'
 import { Row } from 'read-excel-file/types'
+import Personero, { IPersonero } from '../../models/centro_votacion/personero'
 import Mesa, { IMesa } from '../../models/centro_votacion/mesa'
 import Departamento, { IDepartamento } from '../../models/ubigeo/departamento'
 import Provincia, { IProvincia } from '../../models/ubigeo/provincia'
@@ -17,6 +18,19 @@ import { saveLog } from '../admin/log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
 import { eventsLogs } from '../../models/admin/log'
+
+/*******************************************************************************************************/
+// Tipos del Componente //
+/*******************************************************************************************************/
+const TiposPersonero = {
+  MESA: 'mesa',
+  LOCAL: 'local'
+}
+const ActionsPersonero = {
+  ADD: 'add',
+  CHANGE: 'change',
+  REMOVE: 'remove'
+}
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
@@ -43,68 +57,62 @@ export const getAll: Handler = async (req, res) => {
 
     // Añadimos el año
     queryMesas = { ...queryMesas, anho: usuario.anho }
-    // Si es un superusuario
-    if (usuario.rol.super) {
-      // Filtramos por el query de departamento
-      if (query.departamento && query.departamento !== 'todos') {
+    // Obtenemos el código del departamente según el caso
+    let codDpto: string = usuario.rol.super
+      ? (query.departamento as string)
+      : (usuario.departamento?.codigo as string)
+    // Filtramos por el query de departamento
+    if (query.departamento && query.departamento !== 'todos') {
+      queryMesas = {
+        ...queryMesas,
+        ubigeo: { $regex: `^${codDpto}.*` }
+      }
+    }
+
+    // Si existe un query de búsqueda
+    if (query.searchTipo && query.searchTipo !== '') {
+      if (query.searchTipo === 'mesa') {
         queryMesas = {
           ...queryMesas,
-          ubigeo: { $regex: `^${query.departamento}.*` }
+          mesa: {
+            $regex: `.*${query.searchValue as string}.*`,
+            $options: 'i'
+          }
         }
       }
-      // Filtramos por el query de provincia
-      if (query.provincia && query.provincia !== 'todos') {
+      if (query.searchTipo === 'local') {
         queryMesas = {
           ...queryMesas,
-          ubigeo: { $regex: `^${query.departamento}${query.provincia}.*` }
-        }
-      }
-      // Filtramos por el query de distrito
-      if (query.distrito && query.distrito !== 'todos') {
-        queryMesas = {
-          ...queryMesas,
-          ubigeo: {
-            $regex: `^${query.departamento}${query.provincia}${query.distrito}.*`
+          local: {
+            $regex: `.*${query.searchValue as string}.*`,
+            $options: 'i'
           }
         }
       }
     } else {
-      // Filtramos por los que no son superusuarios
-      queryMesas = {
-        ...queryMesas,
-        ubigeo: { $regex: `^${usuario.departamento?.codigo}.*` }
+      // Filtramos por el query de estado de personero
+      if (query.assign && query.assign !== 'todos') {
+        queryMesas = {
+          ...queryMesas,
+          $or: [
+            { personero_mesa: { $exists: query.assign } },
+            { personero_local: { $exists: query.assign } }
+          ]
+        }
       }
       // Filtramos por el query de provincia
       if (query.provincia && query.provincia !== 'todos') {
         queryMesas = {
           ...queryMesas,
-          ubigeo: {
-            $regex: `^${usuario.departamento?.codigo}${query.provincia}.*`
-          }
+          ubigeo: { $regex: `^${codDpto}${query.provincia}.*` }
         }
       }
       // Filtramos por el query de distrito
       if (query.distrito && query.distrito !== 'todos') {
         queryMesas = {
           ...queryMesas,
-          ubigeo: {
-            $regex: `^${usuario.departamento?.codigo}${query.provincia}${query.distrito}.*`
-          }
+          ubigeo: { $regex: `^${codDpto}${query.provincia}${query.distrito}.*` }
         }
-      }
-    }
-    // Filtramos por el query de local
-    if (query.local && query.local !== 'todos') {
-      queryMesas = {
-        ...queryMesas,
-        local: query.local
-      }
-    }
-    // Filtramos por el query de mesa
-    if (query.mesa && query.mesa !== 'todos') {
-      queryMesas = {
-        ...queryMesas,
-        mesa: query.mesa
       }
     }
 
@@ -355,8 +363,8 @@ export const create: Handler = async (req, res) => {
 // Actualizar los datos de una mesa de votación //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, query, body } = req
+  // Leemos las cabeceras, el usuario, los parámetros y el cuerpo de la petición
+  const { headers, usuario, params, body } = req
   // Obtenemos el Id de la mesa de votación
   const { id } = params
 
@@ -368,11 +376,109 @@ export const update: Handler = async (req, res) => {
     const mesaIn: IMesa | null = await Mesa.findById(id)
 
     // Intentamos realizar la búsqueda por id y actualizamos
-    const mesaOut: IMesa | null = await Mesa.findByIdAndUpdate(id, body, {
-      new: true,
-      runValidators: true,
-      context: 'query'
-    })
+    let mesaOut: IMesa | null = null
+    // Si existe un tipo en el cuerpo (Asignar personero)
+    if (body.tipoPers && body.tipoPers !== '') {
+      if (body.tipoPers === TiposPersonero.MESA) {
+        mesaOut = await Mesa.findByIdAndUpdate(
+          id,
+          body.actionPers === ActionsPersonero.REMOVE
+            ? { $unset: { personero_mesa: 1 } }
+            : { $set: { personero_mesa: body.personero } },
+          {
+            new: true,
+            runValidators: true,
+            context: 'query'
+          }
+        )
+        if (body.actionPers === ActionsPersonero.CHANGE) {
+          await Personero.findByIdAndUpdate(
+            mesaIn?.personero_mesa,
+            {
+              $set: { asignado: false },
+              $unset: { tipo: 1, asignadoA: 1 }
+            },
+            {
+              new: true,
+              runValidators: true,
+              context: 'query'
+            }
+          )
+        }
+        await Personero.findByIdAndUpdate(
+          body.personero,
+          body.actionPers === ActionsPersonero.REMOVE
+            ? {
+                $set: { asignado: false },
+                $unset: { tipo: 1, asignadoA: 1 }
+              }
+            : {
+                $set: {
+                  asignado: true,
+                  tipo: TiposPersonero.MESA,
+                  asignadoA: body.mesa.mesa
+                }
+              },
+          {
+            new: true,
+            runValidators: true,
+            context: 'query'
+          }
+        )
+      }
+      if (body.tipoPers === TiposPersonero.LOCAL) {
+        await Mesa.updateMany(
+          { local: body.mesa.local },
+          body.actionPers === ActionsPersonero.REMOVE
+            ? { $unset: { personero_local: 1 } }
+            : { $set: { personero_local: body.personero } }
+        )
+        if (body.actionPers === ActionsPersonero.CHANGE) {
+          await Personero.findByIdAndUpdate(
+            mesaIn?.personero_local,
+            {
+              $set: { asignado: false },
+              $unset: { tipo: 1, asignadoA: 1 }
+            },
+            {
+              new: true,
+              runValidators: true,
+              context: 'query'
+            }
+          )
+        }
+        await Personero.findByIdAndUpdate(
+          body.personero,
+          body.actionPers === ActionsPersonero.REMOVE
+            ? {
+                $set: { asignado: false },
+                $unset: { tipo: 1, asignadoA: 1 }
+              }
+            : {
+                $set: {
+                  asignado: true,
+                  tipo: TiposPersonero.LOCAL,
+                  asignadoA: body.mesa.local
+                }
+              },
+          {
+            new: true,
+            runValidators: true,
+            context: 'query'
+          }
+        )
+      }
+    } else {
+      mesaOut = await Mesa.findByIdAndUpdate(
+        id,
+        { $set: body },
+        {
+          new: true,
+          runValidators: true,
+          context: 'query'
+        }
+      )
+    }
 
     // Guardamos el log del evento
     await saveLog({
@@ -503,6 +609,99 @@ export const remove: Handler = async (req, res) => {
 }
 
 /*******************************************************************************************************/
+// Obtener los personeros disponibles //
+/*******************************************************************************************************/
+export const getPersoneros: Handler = async (req, res) => {
+  // Leemos el usuario y el query de la petición
+  const { query } = req
+
+  try {
+    // Definimos el query de los personeros
+    const queryPersoneros = {
+      departamento: query.departamento,
+      nombres: {
+        $regex: `.*${(query.nombres as string).split(/\s/).join('.*')}.*`,
+        $options: 'i'
+      },
+      apellidos: {
+        $regex: `.*${(query.apellidos as string).split(/\s/).join('.*')}.*`,
+        $options: 'i'
+      },
+      dni: {
+        $regex: `.*${query.dni}.*`,
+        $options: 'i'
+      },
+      asignado: false
+    }
+
+    // Intentamos obtener el total de registros de personeros
+    const totalRegistros: number = await Personero.find(queryPersoneros).count()
+
+    // Obtenemos el número de registros por página y hacemos las validaciones
+    const validatePageSize: any = await getPageSize(
+      pagination.pageSize,
+      query.pageSize
+    )
+    if (!validatePageSize.status) {
+      return res.status(404).json({
+        status: validatePageSize.status,
+        msg: validatePageSize.msg
+      })
+    }
+    const pageSize = validatePageSize.size
+
+    // Obtenemos el número total de páginas
+    const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
+
+    // Obtenemos el número de página y hacemos las validaciones
+    const validatePage: any = await getPage(
+      pagination.page,
+      query.page,
+      totalPaginas
+    )
+    if (!validatePage.status) {
+      return res.status(404).json({
+        status: validatePage.status,
+        msg: validatePage.msg
+      })
+    }
+    const page = validatePage.page
+
+    // Intentamos realizar la búsqueda de todos los personeros paginados
+    const list: Array<IPersonero> = await Personero.find(
+      queryPersoneros,
+      exclude_campos
+    )
+      .sort({ nombres: 'asc', apellidos: 'asc' })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+
+    // Retornamos la lista de personeros
+    return res.json({
+      status: true,
+      pagina: page,
+      totalPaginas,
+      registros: list.length,
+      totalRegistros,
+      list
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log(
+      'Centros de Votación',
+      'Mesas',
+      'Obteniendo la lista de personeros disponibles',
+      error
+    )
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los personeros disponibles'
+    })
+  }
+}
+
+/*******************************************************************************************************/
 // Interface mensajes de errores //
 /*******************************************************************************************************/
 interface IMsgError {
@@ -542,9 +741,9 @@ export const importExcel: Handler = async (req, res) => {
       // Establecemos el id de grupo de log
       let id_grupo: string = `${usuario._id}@${parseNewDate24H_()}`
 
-      // Recorremos las filas y guardamos cada fila previamente validada
-      const promises = rows.map(async (row, index) => {
-        // Si el el index es mayor o igual al fila de inicio
+      // Recorremos las filas para ver si hay errores
+      const promises1 = rows.map(async (row, index) => {
+        // Si el index es mayor o igual al fila de inicio
         if (index >= rowStart) {
           const msg = await validateFields(
             row,
@@ -553,8 +752,27 @@ export const importExcel: Handler = async (req, res) => {
             usuario.rol.super,
             usuario.anho
           )
-          // Si pasó las pruebas de valicación, guardamos los datos de la mesa de votación
-          if (msg === 'ok') {
+          // Si no pasó las validaciones
+          if (msg !== 'ok') {
+            // Guardamos el mensaje de error en el array de mensajes
+            msgError.push({ index, msg })
+          }
+        }
+        return null
+      })
+      await Promise.all(promises1)
+
+      // Si hubo errores retornamos el detalle de los mensajes de error
+      if (msgError.length > 0) {
+        return res.json({
+          status: true,
+          errores: _.orderBy(msgError, ['index'], ['asc'])
+        })
+      } else {
+        // Si no hubo errores, recorremos las filas y guardamos
+        const promises2 = rows.map(async (row, index) => {
+          // Si el el index es mayor o igual al fila de inicio
+          if (index >= rowStart) {
             // Obtenemos los datos del departamento si existe
             const departamento: IDepartamento | null =
               await Departamento.findOne({
@@ -572,15 +790,15 @@ export const importExcel: Handler = async (req, res) => {
               departamento: `${row[0]}`.substring(0, 2)
             })
 
-            // Creamos el modelo de una nueva mesa de votacion
+            // Creamos el modelo de una nueva mesa de votación
             const newMesa: IMesa = new Mesa({
-              ubigeo: `${row[0]}`,
+              mesa: `${row[5]}`,
+              ...(row[6] && { votantes: parseInt(`${row[6]}`, 10) }),
+              local: `${row[4]}`.trim(),
               departamento: departamento?._id,
               provincia: provincia?._id,
               distrito: distrito?._id,
-              local: `${row[4]}`.trim(),
-              mesa: `${row[5]}`,
-              ...(row[6] && { votantes: parseInt(`${row[6]}`, 10) }),
+              ubigeo: `${row[0]}`,
               anho: usuario.anho
             })
 
@@ -607,26 +825,25 @@ export const importExcel: Handler = async (req, res) => {
               registros: 1,
               id_grupo
             })
-          } else {
-            // Guardamos el mensaje de error en el array de mensajes
-            msgError.push({ index, msg })
           }
+          return null
+        })
+        await Promise.all(promises2)
+
+        // Si existe un socket
+        if (globalThis.socketIO) {
+          // Emitimos el evento => mesas de votación importados en el módulo centros de votación, a todos los usuarios conectados //
+          globalThis.socketIO.broadcast.emit(
+            'centros-votacion-mesas-importadas'
+          )
         }
-        return null
-      })
-      await Promise.all(promises)
 
-      // Si existe un socket
-      if (globalThis.socketIO) {
-        // Emitimos el evento => mesas de votación importados en el módulo centros de votación, a todos los usuarios conectados //
-        globalThis.socketIO.broadcast.emit('centros-votacion-mesas-importadas')
+        // Retornamos el detalle de los mensajes de error si existen
+        return res.json({
+          status: true,
+          errores: _.orderBy(msgError, ['index'], ['asc'])
+        })
       }
-
-      // Retornamos el detalle de los mensajes de error si existen
-      return res.json({
-        status: true,
-        errores: _.orderBy(msgError, ['index'], ['asc'])
-      })
     } catch (error) {
       // Mostramos el error en consola
       console.log(
