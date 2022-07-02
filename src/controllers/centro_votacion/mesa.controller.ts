@@ -2,10 +2,12 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
+import fs from 'fs'
 import { join } from 'path'
 import { Error } from 'mongoose'
 import { UploadedFile } from 'express-fileupload'
 import xlsxFile from 'read-excel-file/node'
+import excel from 'excel4node'
 import { Row } from 'read-excel-file/types'
 import Personero, { IPersonero } from '../../models/centro_votacion/personero'
 import Mesa, { IMesa } from '../../models/centro_votacion/mesa'
@@ -18,6 +20,7 @@ import { saveLog } from '../admin/log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
 import { eventsLogs } from '../../models/admin/log'
+import { getHost } from '../../helpers/host'
 
 /*******************************************************************************************************/
 // Tipos del Componente //
@@ -281,20 +284,42 @@ export const create: Handler = async (req, res) => {
 
     // Creamos el modelo de una nueva mesa de votacion
     const newMesa: IMesa = new Mesa({
-      ubigeo: distrito?.ubigeo,
+      mesa: body.mesa,
+      local: body.local,
       departamento: departamento?._id,
       provincia: provincia?._id,
       distrito: distrito?._id,
-      nombre: body.nombre,
-      mesa: body.mesa,
+      ubigeo: body.ubigeo,
       ...(body.votantes && {
         votantes: parseInt(body.votantes, 10)
+      }),
+      ...(body.personero_mesa && {
+        personero_mesa: body.personero_mesa
       }),
       anho: usuario.anho
     })
 
     // Intentamos guardar la nueva mesa de votación
     const mesaOut: IMesa = await newMesa.save()
+
+    // Si existe un personero de mesa
+    if (body.personero_mesa) {
+      await Personero.findByIdAndUpdate(
+        body.personero_mesa,
+        {
+          $set: {
+            asignado: true,
+            tipo: TiposPersonero.MESA,
+            asignadoA: body.mesa
+          }
+        },
+        {
+          new: true,
+          runValidators: true,
+          context: 'query'
+        }
+      )
+    }
 
     // Guardamos el log del evento
     await saveLog({
@@ -377,6 +402,7 @@ export const update: Handler = async (req, res) => {
 
     // Intentamos realizar la búsqueda por id y actualizamos
     let mesaOut: IMesa | null = null
+
     // Si existe un tipo en el cuerpo (Asignar personero)
     if (body.tipoPers && body.tipoPers !== '') {
       if (body.tipoPers === TiposPersonero.MESA) {
@@ -385,11 +411,7 @@ export const update: Handler = async (req, res) => {
           body.actionPers === ActionsPersonero.REMOVE
             ? { $unset: { personero_mesa: 1 } }
             : { $set: { personero_mesa: body.personero } },
-          {
-            new: true,
-            runValidators: true,
-            context: 'query'
-          }
+          { new: true }
         )
         if (body.actionPers === ActionsPersonero.CHANGE) {
           await Personero.findByIdAndUpdate(
@@ -398,11 +420,7 @@ export const update: Handler = async (req, res) => {
               $set: { asignado: false },
               $unset: { tipo: 1, asignadoA: 1 }
             },
-            {
-              new: true,
-              runValidators: true,
-              context: 'query'
-            }
+            { new: true }
           )
         }
         await Personero.findByIdAndUpdate(
@@ -419,11 +437,7 @@ export const update: Handler = async (req, res) => {
                   asignadoA: body.mesa.mesa
                 }
               },
-          {
-            new: true,
-            runValidators: true,
-            context: 'query'
-          }
+          { new: true }
         )
       }
       if (body.tipoPers === TiposPersonero.LOCAL) {
@@ -431,7 +445,8 @@ export const update: Handler = async (req, res) => {
           { local: body.mesa.local },
           body.actionPers === ActionsPersonero.REMOVE
             ? { $unset: { personero_local: 1 } }
-            : { $set: { personero_local: body.personero } }
+            : { $set: { personero_local: body.personero } },
+          { new: true }
         )
         if (body.actionPers === ActionsPersonero.CHANGE) {
           await Personero.findByIdAndUpdate(
@@ -440,11 +455,7 @@ export const update: Handler = async (req, res) => {
               $set: { asignado: false },
               $unset: { tipo: 1, asignadoA: 1 }
             },
-            {
-              new: true,
-              runValidators: true,
-              context: 'query'
-            }
+            { new: true }
           )
         }
         await Personero.findByIdAndUpdate(
@@ -461,23 +472,189 @@ export const update: Handler = async (req, res) => {
                   asignadoA: body.mesa.local
                 }
               },
-          {
-            new: true,
-            runValidators: true,
-            context: 'query'
-          }
+          { new: true }
         )
       }
     } else {
+      // Obtenemos los datos del departamento si existe
+      const departamento: IDepartamento | null = await Departamento.findOne({
+        codigo: body.departamento
+      })
+      // Obtenemos los datos de la provincia si existe si existe
+      const provincia: IProvincia | null = await Provincia.findOne({
+        codigo: body.provincia,
+        departamento: body.departamento
+      })
+      // Obtenemos los datos del distrito si existe
+      const distrito: IDistrito | null = await Distrito.findOne({
+        codigo: body.distrito,
+        provincia: body.provincia,
+        departamento: body.departamento
+      })
+
+      // Actualizamos los datos de la mesa
       mesaOut = await Mesa.findByIdAndUpdate(
         id,
-        { $set: body },
         {
-          new: true,
-          runValidators: true,
-          context: 'query'
-        }
+          $set: {
+            mesa: body.mesa,
+            local: body.local,
+            departamento: departamento?._id,
+            provincia: provincia?._id,
+            distrito: distrito?._id,
+            ubigeo: body.ubigeo,
+            ...(body.votantes && {
+              votantes: parseInt(body.votantes, 10)
+            }),
+            ...(body.personero_mesa && {
+              personero_mesa: body.personero_mesa
+            }),
+            ...(body.personero_local && {
+              personero_local: body.personero_local
+            })
+          },
+          $unset: {
+            ...(!body.personero_mesa && {
+              personero_mesa: 1
+            }),
+            ...(!body.personero_local && {
+              personero_local: 1
+            })
+          }
+        },
+        { new: true }
       )
+
+      if (mesaIn) {
+        if (mesaIn.local !== body.local) {
+          await Mesa.updateMany(
+            { local: mesaIn.local },
+            {
+              $set: { local: body.local }
+            }
+          )
+        }
+        // Si existia un personero de mesa antes de actualizar
+        if (mesaIn.personero_mesa) {
+          if (!body.personero_mesa) {
+            await Personero.findByIdAndUpdate(
+              mesaIn.personero_mesa,
+              {
+                $set: { asignado: false },
+                $unset: { tipo: 1, asignadoA: 1 }
+              },
+              { new: true }
+            )
+          }
+          if (
+            body.personero_mesa &&
+            body.personero_mesa !== mesaIn.personero_mesa
+          ) {
+            await Personero.findByIdAndUpdate(
+              mesaIn.personero_mesa,
+              {
+                $set: { asignado: false },
+                $unset: { tipo: 1, asignadoA: 1 }
+              },
+              { new: true }
+            )
+            await Personero.findByIdAndUpdate(
+              body.personero_mesa,
+              {
+                $set: {
+                  asignado: true,
+                  tipo: TiposPersonero.MESA,
+                  asignadoA: body.mesa
+                }
+              },
+              { new: true }
+            )
+          }
+        } else {
+          if (body.personero_mesa) {
+            await Personero.findByIdAndUpdate(
+              body.personero_mesa,
+              {
+                $set: {
+                  asignado: true,
+                  tipo: TiposPersonero.MESA,
+                  asignadoA: body.mesa
+                }
+              },
+              { new: true }
+            )
+          }
+        }
+        // Si existia un personero de local antes de actualizar
+        if (mesaIn.personero_local) {
+          if (!body.personero_local) {
+            await Personero.findByIdAndUpdate(
+              mesaIn.personero_local,
+              {
+                $set: { asignado: false },
+                $unset: { tipo: 1, asignadoA: 1 }
+              },
+              { new: true }
+            )
+            await Mesa.updateMany(
+              { local: mesaOut?.local },
+              {
+                $unset: { personero_local: 1 }
+              }
+            )
+          }
+          if (
+            body.personero_local &&
+            body.personero_local !== mesaIn.personero_local
+          ) {
+            await Personero.findByIdAndUpdate(
+              mesaIn.personero_local,
+              {
+                $set: { asignado: false },
+                $unset: { tipo: 1, asignadoA: 1 }
+              },
+              { new: true }
+            )
+            await Personero.findByIdAndUpdate(
+              body.personero_local,
+              {
+                $set: {
+                  asignado: true,
+                  tipo: TiposPersonero.LOCAL,
+                  asignadoA: body.local
+                }
+              },
+              { new: true }
+            )
+            await Mesa.updateMany(
+              { local: mesaOut?.local },
+              {
+                $set: { personero_local: body.personero_local }
+              }
+            )
+          }
+        } else {
+          if (body.personero_local) {
+            await Personero.findByIdAndUpdate(
+              body.personero_local,
+              {
+                $set: {
+                  asignado: true,
+                  tipo: TiposPersonero.LOCAL,
+                  asignadoA: body.local
+                }
+              },
+              { new: true }
+            )
+            await Mesa.updateMany(
+              { local: mesaOut?.local },
+              {
+                $set: { personero_local: body.personero_local }
+              }
+            )
+          }
+        }
+      }
     }
 
     // Guardamos el log del evento
@@ -561,6 +738,32 @@ export const remove: Handler = async (req, res) => {
     // Obtenemos la mesa de votación antes que se elimine
     const mesaResp: IMesa | null = await Mesa.findById(id, exclude_campos)
 
+    // Si existe un personero de mesa
+    if (mesaResp && mesaResp.personero_mesa) {
+      await Personero.findByIdAndUpdate(
+        mesaResp.personero_mesa,
+        {
+          $set: { asignado: false },
+          $unset: { tipo: 1, asignadoA: 1 }
+        },
+        { new: true }
+      )
+    }
+    // Si existe un personero de local
+    if (mesaResp && mesaResp.personero_local) {
+      const locales: IMesa[] = await Mesa.find({ local: mesaResp.local })
+      if (locales.length === 1) {
+        await Personero.findByIdAndUpdate(
+          mesaResp.personero_local,
+          {
+            $set: { asignado: false },
+            $unset: { tipo: 1, asignadoA: 1 }
+          },
+          { new: true }
+        )
+      }
+    }
+
     // Intentamos realizar la búsqueda por id y removemos
     const mesaIn: IMesa | null = await Mesa.findByIdAndRemove(id)
 
@@ -617,7 +820,8 @@ export const getPersoneros: Handler = async (req, res) => {
 
   try {
     // Definimos el query de los personeros
-    const queryPersoneros = {
+    const arrayQueryPersoneros: Array<any> = []
+    arrayQueryPersoneros.push({
       departamento: query.departamento,
       nombres: {
         $regex: `.*${(query.nombres as string).split(/\s/).join('.*')}.*`,
@@ -632,7 +836,14 @@ export const getPersoneros: Handler = async (req, res) => {
         $options: 'i'
       },
       asignado: false
+    })
+    if (query.personero_mesa) {
+      arrayQueryPersoneros.push({ _id: query.personero_mesa })
     }
+    if (query.personero_local) {
+      arrayQueryPersoneros.push({ _id: query.personero_local })
+    }
+    const queryPersoneros = { $or: arrayQueryPersoneros }
 
     // Intentamos obtener el total de registros de personeros
     const totalRegistros: number = await Personero.find(queryPersoneros).count()
@@ -702,6 +913,294 @@ export const getPersoneros: Handler = async (req, res) => {
 }
 
 /*******************************************************************************************************/
+// Función para crear la plantilla //
+/*******************************************************************************************************/
+export const createTemplate: Handler = async (req, res) => {
+  // Leemos el usuario y el cuerpo de la petición
+  const { usuario, body } = req
+
+  try {
+    // Obtenemos el departamento según sea el caso
+    let dptoId: string
+    if (usuario.rol.super) {
+      const departamento: IDepartamento | null = await Departamento.findOne({
+        codigo: body.departamento
+      })
+      dptoId = departamento?._id
+    } else {
+      dptoId = usuario.departamento?._id as string
+    }
+
+    // Creamos una nueva instancia de una clase del libro de trabajo.
+    const wb = new excel.Workbook()
+
+    // Añadimos las hojas de trabajo al libro de trabajo.
+    const ws1 = wb.addWorksheet('Mesas y locales de votación')
+    const ws2 = wb.addWorksheet('Personeros')
+
+    // Creamos el estilo de la cabecera tabla
+    const styleHead = wb.createStyle({
+      font: {
+        bold: true,
+        size: 11
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'center',
+        shrinkToFit: true,
+        wrapText: true
+      }
+    })
+
+    // Creamos el estilo de la celda de tabla
+    const styleCell = wb.createStyle({
+      alignment: {
+        horizontal: 'center',
+        vertical: 'center'
+      }
+    })
+
+    // Creamos el estilo de la celda de tabla numérico
+    const styleCellNumber = wb.createStyle({
+      alignment: {
+        horizontal: 'center',
+        vertical: 'center'
+      },
+      numberFormat: '##0'
+    })
+
+    //==============================================================//
+    // CONSTRUIMOS LA HOJA DE MESAS Y LOCALES DE VOTACIÓN           //
+    //==============================================================//
+    // Definimos los anchos las columnas
+    ws1.column(1).setWidth(27)
+    ws1.column(2).setWidth(36)
+    ws1.column(3).setWidth(40)
+    ws1.column(4).setWidth(36)
+    ws1.column(5).setWidth(24)
+    ws1.column(6).setWidth(22)
+    ws1.column(7).setWidth(19)
+    ws1.column(8).setWidth(27)
+    ws1.column(9).setWidth(19)
+
+    // Creamos los campos de la cabecera de la tabla
+    ws1
+      .cell(1, 1)
+      .string('Número de Mesa \n (código de 06 dígitos numéricos)')
+      .style(styleHead)
+    ws1
+      .cell(1, 2)
+      .string('Personero de Mesa \n (Elegir de la lista)')
+      .style(styleHead)
+    ws1
+      .cell(1, 3)
+      .string('Local de Votación \n (Nombre del local de votación)')
+      .style(styleHead)
+    ws1
+      .cell(1, 4)
+      .string('Personero de Local \n (Elegir de la lista)')
+      .style(styleHead)
+    ws1
+      .cell(1, 5)
+      .string('Departamento \n (Nombre del departamento)')
+      .style(styleHead)
+    ws1
+      .cell(1, 6)
+      .string('Provincia \n (Nombre de la provincia)')
+      .style(styleHead)
+    ws1.cell(1, 7).string('Distrito \n (Nombre del distrito)').style(styleHead)
+    ws1
+      .cell(1, 8)
+      .string('Ubigeo \n (código de 06 dígitos numéricos)')
+      .style(styleHead)
+    ws1.cell(1, 9).string('Votantes \n (cantidad numérica)').style(styleHead)
+
+    if (body.tipo === 'new') {
+      // Establecemos los estilos de las celdas
+      for (let i: number = 2; i < 3000; i++) {
+        ws1.cell(i, 1).style(styleCell)
+        ws1.cell(i, 2).style(styleCell)
+        ws1.cell(i, 3).style(styleCell)
+        ws1.cell(i, 4).style(styleCell)
+        ws1.cell(i, 5).style(styleCell)
+        ws1.cell(i, 6).style(styleCell)
+        ws1.cell(i, 7).style(styleCell)
+        ws1.cell(i, 8).style(styleCell)
+        ws1.cell(i, 9).style(styleCellNumber)
+      }
+    }
+
+    if (body.tipo === 'update') {
+      // Obtenemos las mesas sin personeros asignados
+      const mesas: Array<IMesa> = await Mesa.find(
+        {
+          anho: usuario.anho,
+          departamento: dptoId,
+          $or: [
+            { personero_mesa: { $exists: false } },
+            { personero_local: { $exists: false } }
+          ]
+        },
+        exclude_campos
+      )
+        .sort({ ubigeo: 'asc', mesa: 'asc' })
+        .populate('departamento', exclude_campos)
+        .populate('provincia', exclude_campos)
+        .populate('distrito', exclude_campos)
+        .populate('personero_provincia', exclude_campos)
+        .populate('personero_distrito', exclude_campos)
+        .populate('personero_local', exclude_campos)
+        .populate('personero_mesa', exclude_campos)
+        .collation({ locale: 'es', numericOrdering: true })
+
+      // Creamos las filas con el contenido
+      const rowStart1 = 2
+      const promisesMesas = mesas.map(async (row, index) => {
+        ws1
+          .cell(index + rowStart1, 1)
+          .string(row.mesa)
+          .style(styleCell)
+        if (row.personero_mesa) {
+          ws1
+            .cell(index + rowStart1, 2)
+            .string(
+              `${row.personero_mesa.nombres.toUpperCase()} ${row.personero_mesa.apellidos.toUpperCase()} (${
+                row.personero_mesa.dni
+              })`
+            )
+            .style(styleCell)
+        } else {
+          ws1.cell(index + rowStart1, 2).style(styleCell)
+        }
+        ws1
+          .cell(index + rowStart1, 3)
+          .string(row.local)
+          .style(styleCell)
+        if (row.personero_local) {
+          ws1
+            .cell(index + rowStart1, 4)
+            .string(
+              `${row.personero_local.nombres.toUpperCase()} ${row.personero_local.apellidos.toUpperCase()} (${
+                row.personero_local.dni
+              })`
+            )
+            .style(styleCell)
+        } else {
+          ws1.cell(index + rowStart1, 4).style(styleCell)
+        }
+        ws1
+          .cell(index + rowStart1, 5)
+          .string(row.departamento?.nombre.toUpperCase())
+          .style(styleCell)
+        ws1
+          .cell(index + rowStart1, 6)
+          .string(row.provincia?.nombre.toUpperCase())
+          .style(styleCell)
+        ws1
+          .cell(index + rowStart1, 7)
+          .string(row.distrito?.nombre.toUpperCase())
+          .style(styleCell)
+        ws1
+          .cell(index + rowStart1, 8)
+          .string(row.ubigeo)
+          .style(styleCell)
+        if (row.votantes) {
+          ws1
+            .cell(index + rowStart1, 9)
+            .number(row.votantes)
+            .style(styleCellNumber)
+        } else {
+          ws1.cell(index + rowStart1, 9).style(styleCellNumber)
+        }
+      })
+      await Promise.all(promisesMesas)
+    }
+    //==============================================================//
+    // CONSTRUIMOS LA HOJA DE PERSONEROS DISPONIBLES v              //
+    //==============================================================//
+    // Definimos los anchos las columnas
+    ws2.column(1).setWidth(60)
+
+    // Creamos los campos de la cabecera de la tabla
+    ws2.cell(1, 1).string('Personeros disponibles').style(styleHead)
+
+    // Obtenemos los personeros disponibles
+    const personeros: Array<IPersonero> = await Personero.find(
+      { departamento: dptoId, asignado: false },
+      exclude_campos
+    ).sort({ nombres: 'asc', apellidos: 'asc' })
+
+    // Creamos las filas con el contenido
+    const rowStart2 = 2
+    let rowFinish2 = 2
+    const promisesPers = personeros.map(async (row, index) => {
+      ws2
+        .cell(index + rowStart2, 1)
+        .string(
+          `${row.nombres.toUpperCase()} ${row.apellidos.toUpperCase()} (${
+            row.dni
+          })`
+        )
+        .style(styleCell)
+      rowFinish2 = index + rowStart2
+    })
+    await Promise.all(promisesPers)
+
+    // Añadimos la validación y lista desplegable para Personeros
+    ws1.addDataValidation({
+      type: 'list',
+      allowBlank: 1,
+      sqref: `B2:B5000`,
+      formulas: [`=Personeros!$A$${rowStart2}:$A$${rowFinish2}`]
+    })
+    ws1.addDataValidation({
+      type: 'list',
+      allowBlank: 1,
+      sqref: `D2:D5000`,
+      formulas: [`=Personeros!$A$${rowStart2}:$A$${rowFinish2}`]
+    })
+
+    // Definimos la carpeta de la plantilla
+    const path = join(
+      __dirname,
+      '../../../uploads',
+      'centros-votacion',
+      'mesas'
+    )
+    // Si no existe la carpeta la creamos
+    if (!fs.existsSync(path)) {
+      fs.mkdirSync(path, { recursive: true })
+    }
+    // Definimos la ruta del archivo
+    const pathFile = join(path, `template_${body.tipo}.xlsx`)
+    // Guardamos el documento
+    await wb.write(pathFile)
+
+    // Obtenemos el host
+    const host = getHost()
+    // Url del template excel
+    const url = `${host}/uploads/centros-votacion/mesas/template_${body.tipo}.xlsx`
+
+    // Devolvemos la url del template
+    res.json({
+      status: true,
+      url
+    })
+  } catch (error) {
+    console.log(
+      'Centros de Votación',
+      'Mesas',
+      'Creando plantilla de mesas',
+      error
+    )
+    return res.status(400).json({
+      status: false,
+      msg: 'No se pudo crear la plantilla de mesas y locales votación'
+    })
+  }
+}
+
+/*******************************************************************************************************/
 // Interface mensajes de errores //
 /*******************************************************************************************************/
 interface IMsgError {
@@ -713,8 +1212,8 @@ interface IMsgError {
 // Procesar archivo excel de mesas de votación //
 /*******************************************************************************************************/
 export const importExcel: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario y los archivos de la petición
-  const { headers, usuario, files } = req
+  // Leemos las cabeceras, el usuario, cuerpo y los archivos de la petición
+  const { headers, usuario, body, files } = req
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
   const { source, origin, ip, device, browser } = headers
@@ -726,8 +1225,14 @@ export const importExcel: Handler = async (req, res) => {
       const pathFile: string = await storeFile(
         <UploadedFile>files.file,
         join('centros-votacion', 'mesas'),
-        'temp'
+        `temp_${body.tipo}`
       )
+
+      // Obtenemos el departamento según sea el caso
+      const codDpto: string =
+        usuario && usuario.rol.super
+          ? body.departamento
+          : usuario.departamento?.codigo
 
       // Obtenemos las filas de la plantilla de excel
       const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
@@ -742,25 +1247,294 @@ export const importExcel: Handler = async (req, res) => {
       let id_grupo: string = `${usuario._id}@${parseNewDate24H_()}`
 
       // Recorremos las filas para ver si hay errores
-      const promises1 = rows.map(async (row, index) => {
+      const promises = rows.map(async (row, index) => {
         // Si el index es mayor o igual al fila de inicio
         if (index >= rowStart) {
           const msg = await validateFields(
+            body.tipo,
             row,
             index,
-            usuario.departamento ? usuario.departamento?.codigo : '',
-            usuario.rol.super,
-            usuario.anho
+            codDpto,
+            usuario.anho as number
           )
-          // Si no pasó las validaciones
-          if (msg !== 'ok') {
+          // Si pasó las validaciones
+          if (msg === 'ok') {
+            // Obtenemos los datos del departamento si existe
+            const departamento: IDepartamento | null =
+              await Departamento.findOne({
+                codigo: `${row[7]}`.substring(0, 2)
+              })
+            // Obtenemos los datos de la provincia si existe
+            const provincia: IProvincia | null = await Provincia.findOne({
+              codigo: `${row[7]}`.substring(2, 4),
+              departamento: `${row[7]}`.substring(0, 2)
+            })
+            // Obtenemos los datos del distrito si existe
+            const distrito: IDistrito | null = await Distrito.findOne({
+              codigo: `${row[7]}`.substring(4, 6),
+              provincia: `${row[7]}`.substring(2, 4),
+              departamento: `${row[7]}`.substring(0, 2)
+            })
+
+            // Si existe un personero de mesa
+            let personeroMesa: IPersonero | null = null
+            if (row[1] && `${row[1]}` !== '') {
+              const row1Parts = `${row[1]}`.split('(')
+              const dni1 = row1Parts[1].replace(')', '')
+              if (dni1.length === 8) {
+                personeroMesa = await Personero.findOne({
+                  dni: dni1,
+                  anho: usuario.anho as number
+                })
+              }
+            }
+
+            // Si existe un personero de local
+            let personeroLocal: IPersonero | null = null
+            if (row[3] && `${row[3]}` !== '') {
+              const row3Parts = `${row[3]}`.split('(')
+              const dni3 = row3Parts[1].replace(')', '')
+              if (dni3.length === 8) {
+                personeroLocal = await Personero.findOne({
+                  dni: dni3,
+                  anho: usuario.anho as number
+                })
+              }
+            }
+
+            if (body.tipo === 'new') {
+              // Creamos el modelo de una nueva mesa de votación
+              const newMesa: IMesa = new Mesa({
+                mesa: `${row[0]}`,
+                ...(personeroMesa && { personero_mesa: personeroMesa._id }),
+                local: `${row[2]}`,
+                ...(personeroLocal && { personero_local: personeroLocal._id }),
+                departamento: departamento?._id,
+                provincia: provincia?._id,
+                distrito: distrito?._id,
+                ubigeo: `${row[7]}`,
+                ...(row[8] && { votantes: parseInt(`${row[8]}`, 10) }),
+                anho: usuario.anho
+              })
+
+              // Intentamos guardar la nueva mesa de votación
+              const mesaOut: IMesa = await newMesa.save()
+
+              // Si existe un personero de mesa
+              if (personeroMesa) {
+                await Personero.findByIdAndUpdate(personeroMesa._id, {
+                  $set: {
+                    asignado: true,
+                    tipo: TiposPersonero.MESA,
+                    asignadoA: mesaOut.mesa
+                  }
+                })
+              }
+
+              // Si existe un personero de local
+              if (personeroLocal) {
+                await Personero.findByIdAndUpdate(personeroLocal._id, {
+                  $set: {
+                    asignado: true,
+                    tipo: TiposPersonero.LOCAL,
+                    asignadoA: mesaOut.local
+                  }
+                })
+              }
+
+              // Guardamos el log del evento
+              await saveLog({
+                usuario: usuario._id,
+                fuente: <string>source,
+                origen: <string>origin,
+                ip: <string>ip,
+                dispositivo: <string>device,
+                navegador: <string>browser,
+                modulo: nombre_modulo,
+                submodulo: nombre_submodulo,
+                controller: nombre_controlador,
+                funcion: 'create',
+                descripcion: 'Crear nueva mesa de votación por excel importado',
+                evento: eventsLogs.create,
+                data_in: '',
+                data_out: JSON.stringify(mesaOut, null, 2),
+                procesamiento: 'masivo',
+                registros: 1,
+                id_grupo
+              })
+            }
+            if (body.tipo === 'update') {
+              // Intentamos obtener la mesa de votación antes que se actualice
+              const mesaIn: IMesa | null = await Mesa.findOne({
+                mesa: `${row[0]}`,
+                anho: usuario.anho
+              })
+
+              // Intentamos realizar la búsqueda por id y actualizamos
+              let mesaOut: IMesa | null = await Mesa.findOneAndUpdate(
+                { mesa: `${row[0]}`, anho: usuario.anho },
+                {
+                  $set: {
+                    ...(personeroMesa && { personero_mesa: personeroMesa._id }),
+                    local: `${row[2]}`,
+                    ...(personeroLocal && {
+                      personero_local: personeroLocal._id
+                    }),
+                    departamento: departamento?._id,
+                    provincia: provincia?._id,
+                    distrito: distrito?._id,
+                    ubigeo: `${row[7]}`,
+                    ...(row[8] && { votantes: parseInt(`${row[8]}`, 10) })
+                  },
+                  $unset: {
+                    ...(!personeroMesa && {
+                      personero_mesa: 1
+                    }),
+                    ...(!personeroLocal && {
+                      personero_local: 1
+                    })
+                  }
+                },
+                { new: true }
+              )
+
+              if (mesaIn) {
+                // Si existia un personero de mesa antes de actualizar
+                if (mesaIn.personero_mesa) {
+                  if (!personeroMesa) {
+                    await Personero.findByIdAndUpdate(
+                      mesaIn.personero_mesa,
+                      {
+                        $set: { asignado: false },
+                        $unset: { tipo: 1, asignadoA: 1 }
+                      },
+                      { new: true }
+                    )
+                  }
+                  if (
+                    personeroMesa &&
+                    personeroMesa._id !== mesaIn.personero_mesa
+                  ) {
+                    await Personero.findByIdAndUpdate(
+                      mesaIn.personero_mesa,
+                      {
+                        $set: { asignado: false },
+                        $unset: { tipo: 1, asignadoA: 1 }
+                      },
+                      { new: true }
+                    )
+                    await Personero.findByIdAndUpdate(
+                      personeroMesa._id,
+                      {
+                        $set: {
+                          asignado: true,
+                          tipo: TiposPersonero.MESA,
+                          asignadoA: `${row[0]}`
+                        }
+                      },
+                      { new: true }
+                    )
+                  }
+                } else {
+                  if (personeroMesa) {
+                    await Personero.findByIdAndUpdate(
+                      personeroMesa._id,
+                      {
+                        $set: {
+                          asignado: true,
+                          tipo: TiposPersonero.MESA,
+                          asignadoA: `${row[0]}`
+                        }
+                      },
+                      { new: true }
+                    )
+                  }
+                }
+                // Si existia un personero de local antes de actualizar
+                if (mesaIn.personero_local) {
+                  if (!personeroLocal) {
+                    await Personero.findByIdAndUpdate(
+                      mesaIn.personero_local,
+                      {
+                        $set: { asignado: false },
+                        $unset: { tipo: 1, asignadoA: 1 }
+                      },
+                      { new: true }
+                    )
+                    await Mesa.updateMany(
+                      { local: mesaOut?.local },
+                      {
+                        $unset: { personero_local: 1 }
+                      }
+                    )
+                  }
+                  if (
+                    personeroLocal &&
+                    personeroLocal._id !== mesaIn.personero_local
+                  ) {
+                    await Personero.findByIdAndUpdate(
+                      mesaIn.personero_local,
+                      {
+                        $set: { asignado: false },
+                        $unset: { tipo: 1, asignadoA: 1 }
+                      },
+                      { new: true }
+                    )
+                    await Personero.findByIdAndUpdate(
+                      personeroLocal._id,
+                      {
+                        $set: {
+                          asignado: true,
+                          tipo: TiposPersonero.LOCAL,
+                          asignadoA: mesaOut?.local
+                        }
+                      },
+                      { new: true }
+                    )
+                    await Mesa.updateMany(
+                      { local: mesaOut?.local },
+                      {
+                        $set: { personero_local: personeroLocal._id }
+                      }
+                    )
+                  }
+                } else {
+                  if (personeroLocal) {
+                    await Personero.findByIdAndUpdate(
+                      personeroLocal._id,
+                      {
+                        $set: {
+                          asignado: true,
+                          tipo: TiposPersonero.LOCAL,
+                          asignadoA: mesaOut?.local
+                        }
+                      },
+                      { new: true }
+                    )
+                    await Mesa.updateMany(
+                      { local: mesaOut?.local },
+                      {
+                        $set: { personero_local: personeroLocal._id }
+                      }
+                    )
+                  }
+                }
+              }
+            }
+          } else {
             // Guardamos el mensaje de error en el array de mensajes
             msgError.push({ index, msg })
           }
         }
         return null
       })
-      await Promise.all(promises1)
+      await Promise.all(promises)
+
+      // Si existe un socket
+      if (globalThis.socketIO) {
+        // Emitimos el evento => mesas de votación importados en el módulo centros de votación, a todos los usuarios conectados //
+        globalThis.socketIO.broadcast.emit('centros-votacion-mesas-importadas')
+      }
 
       // Si hubo errores retornamos el detalle de los mensajes de error
       if (msgError.length > 0) {
@@ -769,79 +1543,8 @@ export const importExcel: Handler = async (req, res) => {
           errores: _.orderBy(msgError, ['index'], ['asc'])
         })
       } else {
-        // Si no hubo errores, recorremos las filas y guardamos
-        const promises2 = rows.map(async (row, index) => {
-          // Si el el index es mayor o igual al fila de inicio
-          if (index >= rowStart) {
-            // Obtenemos los datos del departamento si existe
-            const departamento: IDepartamento | null =
-              await Departamento.findOne({
-                codigo: `${row[0]}`.substring(0, 2)
-              })
-            // Obtenemos los datos de la provincia si existe
-            const provincia: IProvincia | null = await Provincia.findOne({
-              codigo: `${row[0]}`.substring(2, 4),
-              departamento: `${row[0]}`.substring(0, 2)
-            })
-            // Obtenemos los datos del distrito si existe
-            const distrito: IDistrito | null = await Distrito.findOne({
-              codigo: `${row[0]}`.substring(4, 6),
-              provincia: `${row[0]}`.substring(2, 4),
-              departamento: `${row[0]}`.substring(0, 2)
-            })
-
-            // Creamos el modelo de una nueva mesa de votación
-            const newMesa: IMesa = new Mesa({
-              mesa: `${row[5]}`,
-              ...(row[6] && { votantes: parseInt(`${row[6]}`, 10) }),
-              local: `${row[4]}`.trim(),
-              departamento: departamento?._id,
-              provincia: provincia?._id,
-              distrito: distrito?._id,
-              ubigeo: `${row[0]}`,
-              anho: usuario.anho
-            })
-
-            // Intentamos guardar la nueva mesa de votación
-            const mesaOut: IMesa = await newMesa.save()
-
-            // Guardamos el log del evento
-            await saveLog({
-              usuario: usuario._id,
-              fuente: <string>source,
-              origen: <string>origin,
-              ip: <string>ip,
-              dispositivo: <string>device,
-              navegador: <string>browser,
-              modulo: nombre_modulo,
-              submodulo: nombre_submodulo,
-              controller: nombre_controlador,
-              funcion: 'create',
-              descripcion: 'Crear nueva mesa de votación por excel importado',
-              evento: eventsLogs.create,
-              data_in: '',
-              data_out: JSON.stringify(mesaOut, null, 2),
-              procesamiento: 'masivo',
-              registros: 1,
-              id_grupo
-            })
-          }
-          return null
-        })
-        await Promise.all(promises2)
-
-        // Si existe un socket
-        if (globalThis.socketIO) {
-          // Emitimos el evento => mesas de votación importados en el módulo centros de votación, a todos los usuarios conectados //
-          globalThis.socketIO.broadcast.emit(
-            'centros-votacion-mesas-importadas'
-          )
-        }
-
-        // Retornamos el detalle de los mensajes de error si existen
         return res.json({
-          status: true,
-          errores: _.orderBy(msgError, ['index'], ['asc'])
+          status: true
         })
       }
     } catch (error) {
@@ -864,76 +1567,67 @@ export const importExcel: Handler = async (req, res) => {
 // Función para validar los campos del excel de mesas de votación //
 /*******************************************************************************************************/
 const validateFields = async (
+  tipo: string,
   row: Row,
   index: number,
   codigo: string,
-  superUser: boolean,
-  anho: number | undefined
+  anho: number
 ) => {
-  // Validamos que el ubigeo no esté vacio
-  if (`${row[0]}` === '' || row[0] === null) {
-    return `Fila ${index}: El campo ubigeo no puede estar vacio`
-  }
-  // Validamos que el nombre del centro de votación no esté vacio
-  if (`${row[4]}` === '' || row[4] === null) {
-    return `Fila ${index}: El campo local no puede estar vacio`
-  }
   // Validamos que el número de mesa no esté vacio
-  if (`${row[5]}` === '' || row[5] === null) {
+  if (`${row[0]}` === '' || row[0] === null) {
     return `Fila ${index}: El campo número mesa no puede estar vacio`
   }
-  // Validamos que el ubigeo tenga 6 dígitos
+  // Validamos que el nombre del centro de votación no esté vacio
+  if (`${row[2]}` === '' || row[2] === null) {
+    return `Fila ${index}: El campo local no puede estar vacio`
+  }
+  // Validamos que el ubigeo no esté vacio
+  if (`${row[7]}` === '' || row[7] === null) {
+    return `Fila ${index}: El campo ubigeo no puede estar vacio`
+  }
+  // Validamos que el número de mesa tenga 6 dígitos
   if (`${row[0]}`.length !== 6) {
+    return `Fila ${index}: El campo número de mesa debe tener 6 dígitos`
+  }
+  // Validamos que el ubigeo tenga 6 dígitos
+  if (`${row[7]}`.length !== 6) {
     return `Fila ${index}: El campo ubigeo debe tener 6 dígitos`
   }
   // Validamos que el ubigeo corresponda al departamento del usuario
-  if (!superUser && `${row[0]}`.substring(0, 2) !== codigo) {
+  if (`${row[7]}`.substring(0, 2) !== codigo) {
     return `Fila ${index}: El campo ubigeo debe comenzar con el código de departamento ${codigo}`
-  }
-  // Validamos que el número de mesa tenga 6 dígitos
-  if (`${row[5]}`.length !== 6) {
-    return `Fila ${index}: El campo número de mesa debe tener 6 dígitos`
-  }
-  // Obtenemos los datos del departamento si existe
-  const departamento: IDepartamento | null = await Departamento.findOne({
-    codigo: `${row[0]}`.substring(0, 2)
-  })
-  // Validamos que exista el departamento
-  if (!departamento) {
-    return `Fila ${index}: El departamento ${`${row[0]}`.substring(
-      0,
-      2
-    )} no existe`
   }
   // Obtenemos los datos de la provincia si existe
   const provincia: IProvincia | null = await Provincia.findOne({
-    codigo: `${row[0]}`.substring(2, 4),
-    departamento: `${row[0]}`.substring(0, 2)
+    codigo: `${row[7]}`.substring(2, 4),
+    departamento: `${row[7]}`.substring(0, 2)
   })
   // Validamos que exista la provincia
   if (!provincia) {
-    return `Fila ${index}: La provincia ${`${row[0]}`.substring(
+    return `Fila ${index}: La provincia ${`${row[7]}`.substring(
       2,
       4
     )} no existe`
   }
   // Obtenemos los datos del distrito si existe
   const distrito: IDistrito | null = await Distrito.findOne({
-    codigo: `${row[0]}`.substring(4, 6),
-    provincia: `${row[0]}`.substring(2, 4),
-    departamento: `${row[0]}`.substring(0, 2)
+    codigo: `${row[7]}`.substring(4, 6),
+    provincia: `${row[7]}`.substring(2, 4),
+    departamento: `${row[7]}`.substring(0, 2)
   })
   // Validamos que exista el distrito
   if (!distrito) {
-    return `Fila ${index}: El distrito ${`${row[0]}`.substring(4, 6)} no existe`
+    return `Fila ${index}: El distrito ${`${row[7]}`.substring(4, 6)} no existe`
   }
-  // Si existe un número de mesa para el anho
-  const mesaU: IMesa | null = await Mesa.findOne({
-    mesa: `${row[5]}`,
-    anho
-  })
-  if (mesaU) {
-    return `Fila ${index}: El número de mesa ${row[5]}, ya se encuentra registrado para estas elecciones ${anho}`
+  if (tipo === 'new') {
+    // Si existe un número de mesa para el anho
+    const mesaU: IMesa | null = await Mesa.findOne({
+      mesa: `${row[0]}`,
+      anho
+    })
+    if (mesaU) {
+      return `Fila ${index}: El número de mesa ${row[0]}, ya se encuentra registrado para estas elecciones ${anho}`
+    }
   }
   // Si pasó todas las validaciones
   return 'ok'

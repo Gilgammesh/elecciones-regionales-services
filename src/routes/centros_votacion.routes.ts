@@ -29,6 +29,7 @@ router.delete('/personeros/:id', [validarToken, validarRol], personero.remove)
 
 // Mesas de votación
 router.get('/mesas/personeros', [validarToken, validarRol], mesa.getPersoneros)
+router.post('/mesas/template', [validarToken, validarRol], mesa.createTemplate)
 router.post('/mesas/import-excel', [validarToken, validarRol], mesa.importExcel)
 router.get('/mesas', [validarToken, validarRol], mesa.getAll)
 router.post('/mesas', [validarToken, validarRol], mesa.create)
