@@ -65,11 +65,11 @@ export const getAll: Handler = async (req, res) => {
         queryPersoneros = {
           ...queryPersoneros,
           nombres: {
-            $regex: `.*${searchValueParts[0].trim()}.*`,
+            $regex: `.*${searchValueParts[0].trim().split(/\s/).join('.*')}.*`,
             $options: 'i'
           },
           apellidos: {
-            $regex: `.*${searchValueParts[1].trim()}.*`,
+            $regex: `.*${searchValueParts[1].trim().split(/\s/).join('.*')}.*`,
             $options: 'i'
           }
         }
@@ -95,7 +95,6 @@ export const getAll: Handler = async (req, res) => {
     } else {
       if (query.estado && query.estado !== 'todos') {
         // Filtramos por el query de estado de personero
-        console.log(query.estado)
         queryPersoneros = {
           ...queryPersoneros,
           estado: query.estado

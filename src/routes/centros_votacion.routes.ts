@@ -16,24 +16,26 @@ const router: Router = Router()
 /*******************************************************************************************************/
 
 // Personeros
-router.get('/personeros', [validarToken, validarRol], personero.getAll)
-router.post('/personeros', [validarToken, validarRol], personero.create)
-router.get('/personeros/:id', [validarToken, validarRol], personero.get)
-router.put('/personeros/:id', [validarToken, validarRol], personero.update)
-router.delete('/personeros/:id', [validarToken, validarRol], personero.remove)
 router.post(
   '/personeros/import-excel',
   [validarToken, validarRol],
   personero.importExcel
 )
+router.get('/personeros', [validarToken, validarRol], personero.getAll)
+router.post('/personeros', [validarToken, validarRol], personero.create)
+router.get('/personeros/:id', [validarToken, validarRol], personero.get)
+router.put('/personeros/:id', [validarToken, validarRol], personero.update)
+router.delete('/personeros/:id', [validarToken, validarRol], personero.remove)
 
 // Mesas de votación
+router.get('/mesas/personeros', [validarToken, validarRol], mesa.getPersoneros)
+router.post('/mesas/template', [validarToken, validarRol], mesa.createTemplate)
+router.post('/mesas/import-excel', [validarToken, validarRol], mesa.importExcel)
 router.get('/mesas', [validarToken, validarRol], mesa.getAll)
 router.post('/mesas', [validarToken, validarRol], mesa.create)
 router.get('/mesas/:id', [validarToken, validarRol], mesa.get)
 router.put('/mesas/:id', [validarToken, validarRol], mesa.update)
 router.delete('/mesas/:id', [validarToken, validarRol], mesa.remove)
-router.post('/mesas/import-excel', [validarToken, validarRol], mesa.importExcel)
 
 // Mesas y Locales resumidos
 router.get('/getMesas', [validarToken], mesa.getMesas)

@@ -13,12 +13,12 @@ import { IPersonero } from './personero'
 // Interface del Modelo //
 /*******************************************************************************************************/
 export interface IMesa extends Document {
-  ubigeo: string
+  mesa: string
+  local: string
   departamento?: PopulatedDoc<IDepartamento>
   provincia?: PopulatedDoc<IProvincia>
   distrito?: PopulatedDoc<IDistrito>
-  local: string
-  mesa: string
+  ubigeo: string
   personero_provincia?: PopulatedDoc<IPersonero>
   personero_distrito?: PopulatedDoc<IPersonero>
   personero_local?: PopulatedDoc<IPersonero>
@@ -34,15 +34,20 @@ export interface IMesa extends Document {
 /*******************************************************************************************************/
 const MesaSchema: Schema = new Schema(
   {
-    ubigeo: {
+    mesa: {
       type: String,
-      required: [true, 'El ubigeo es requerido'],
+      required: [true, 'El número de mesa es requerido'],
       validate: {
         validator: validator.isNumeric,
-        message: 'El ubigeo debe tener sólo números'
+        message: 'El número de mesa debe tener sólo números'
       },
-      minLength: [6, 'El ubigeo debe tener 6 digitos'],
-      maxLength: [6, 'El ubigeo debe tener 6 digitos']
+      minLength: [6, 'El número de mesa debe tener 6 digitos'],
+      maxLength: [6, 'El número de mesa debe tener 6 digitos']
+    },
+    local: {
+      type: String,
+      required: [true, 'El local de votación es requerido'],
+      trim: true
     },
     departamento: {
       ref: 'UbigeoDepartamento',
@@ -59,20 +64,15 @@ const MesaSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       required: [true, 'El distrito es requerido']
     },
-    local: {
+    ubigeo: {
       type: String,
-      required: [true, 'El local de votación es requerido'],
-      trim: true
-    },
-    mesa: {
-      type: String,
-      required: [true, 'El número de mesa es requerido'],
+      required: [true, 'El ubigeo es requerido'],
       validate: {
         validator: validator.isNumeric,
-        message: 'El número de mesa debe tener sólo números'
+        message: 'El ubigeo debe tener sólo números'
       },
-      minLength: [6, 'El número de mesa debe tener 6 digitos'],
-      maxLength: [6, 'El número de mesa debe tener 6 digitos']
+      minLength: [6, 'El ubigeo debe tener 6 digitos'],
+      maxLength: [6, 'El ubigeo debe tener 6 digitos']
     },
     personero_provincia: {
       ref: 'CentroVotacionPersonero',
