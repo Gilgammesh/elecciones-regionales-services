@@ -12,5 +12,13 @@ declare namespace Express {
       }
       anho?: number
     }
+    personero: {
+      _id: string
+      departamento?: {
+        _id: string
+        codigo: string
+      }
+      anho?: number
+    }
   }
 }

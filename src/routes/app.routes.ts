@@ -2,9 +2,8 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Router } from 'express'
-import { validarToken } from '../middlewares/authentication'
-import * as auth from '../controllers/auth/auth.controller'
-import * as password from '../controllers/auth/password.controller'
+import { validarToken } from '../middlewares/app/authentication'
+import * as auth from '../controllers/app/auth.controller'
 
 /*******************************************************************************************************/
 // Instanciamos router //
@@ -16,13 +15,9 @@ const router: Router = Router()
 /*******************************************************************************************************/
 
 // Autenticaciones
-router.post('/check', auth.check)
-router.post('/login', auth.login)
-router.post('/logout', validarToken, auth.logout)
-router.post('/token', auth.token)
-
-// Clave
-router.post('/cambiar-password', validarToken, password.update)
+router.post('/auth/check', auth.check)
+router.post('/auth/login', auth.login)
+router.post('/auth/token', auth.token)
 
 /*******************************************************************************************************/
 // Exportamos las rutas definidas en router por defecto //

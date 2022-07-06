@@ -39,7 +39,8 @@ export const dbName: string = process.env.APP_MONGO_DB_NAME_ELEC || 'test' // No
 // Configuraciones Generales de la Aplicación //
 /*******************************************************************************************************/
 export const locale: string = 'es-PE' // Locale para la zona horaria
-export const tokenTime: string = '7d' // Tiempo de expiración de los JsonWebToken generados en el auth Login
+export const tokenTime: string = '7d' // Tiempo de expiración en el auth Login de la Intranet
+export const tokenTimeApp: string = '1d' // Tiempo de expiración auth Login de la App de Personeros
 export const timeZone: string = 'America/Lima' // Zona horaria la aplicación
 
 /*******************************************************************************************************/
