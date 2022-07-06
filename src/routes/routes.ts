@@ -8,6 +8,7 @@ import usuariosRoutes from './usuarios.routes'
 import eleccionesRoutes from './elecciones.routes'
 import centrosVotacionRoutes from './centros_votacion.routes'
 import ubigeoRoutes from './ubigeo.routes'
+import appRoutes from './app.routes'
 
 /*******************************************************************************************************/
 // Interface de Rutas //
@@ -48,7 +49,7 @@ const routes: Array<IRoutes> = [
   {
     path: '/centros-votacion',
     router: centrosVotacionRoutes
-  }
+  },
   /* {
 		path: '/monitoreo',
 		router: ,
@@ -57,6 +58,10 @@ const routes: Array<IRoutes> = [
 		path: '/reportes',
 		router: ,
 	} */
+  {
+    path: '/app',
+    router: appRoutes
+  }
 ]
 
 /*******************************************************************************************************/
