@@ -25,6 +25,7 @@ export interface IMesa extends Document {
   personero_mesa?: PopulatedDoc<IPersonero>
   votantes?: number
   anho: number
+  enviado: false
   createdAt: Date
   updatedAt: Date
 }
@@ -91,7 +92,11 @@ const MesaSchema: Schema = new Schema(
       type: Schema.Types.ObjectId
     },
     votantes: Number,
-    anho: Number
+    anho: Number,
+    enviado: {
+      type: Boolean,
+      default: true
+    }
   },
   {
     collection: 'centros_votacion.mesas',

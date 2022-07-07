@@ -70,6 +70,7 @@ export const validarToken: Handler = async (req, res, next) => {
           // Definimos los datos del personero
           const personeroResponse: IPersoneroResponse = {
             _id: personero._id,
+            tipo: personero.tipo,
             departamento: {
               _id: personero.departamento._id,
               codigo: personero.departamento.codigo
