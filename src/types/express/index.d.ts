@@ -14,6 +14,7 @@ declare namespace Express {
     }
     personero: {
       _id: string
+      tipo?: string
       departamento?: {
         _id: string
         codigo: string
