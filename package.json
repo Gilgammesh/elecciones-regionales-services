@@ -14,9 +14,9 @@
     "express"
   ],
   "author": {
-    "name": "SANTANDERTECH SAC",
-    "email": "santandertechsac@gmail.com",
-    "url": "https://www.santandertech.com"
+    "name": "Carlos Santander",
+    "email": "carlos.santander@gmail.com",
+    "url": "https://carlossantander.com/"
   },
   "license": "Private",
   "dependencies": {

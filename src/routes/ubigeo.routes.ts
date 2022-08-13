@@ -25,6 +25,7 @@ router.delete('/departamentos/:id', validarToken, departamento.remove)
 
 // Provincias
 router.get('/provincias', validarToken, provincia.getAll)
+router.get('/provincias_', validarToken, provincia.getAll_)
 router.get('/provincias/:id', validarToken, provincia.get)
 router.post('/provincias', validarToken, provincia.create)
 router.put('/provincias/:id', validarToken, provincia.update)
@@ -32,6 +33,7 @@ router.delete('/provincias/:id', validarToken, provincia.remove)
 
 // Distritos
 router.get('/distritos', validarToken, distrito.getAll)
+router.get('/distritos_', validarToken, distrito.getAll_)
 router.get('/distritos/:id', validarToken, distrito.get)
 router.post('/distritos', validarToken, distrito.create)
 router.put('/distritos/:id', validarToken, distrito.update)

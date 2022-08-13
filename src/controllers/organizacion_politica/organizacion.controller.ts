@@ -1,0 +1,420 @@
+/*******************************************************************************************************/
+// Importamos las dependencias //
+/*******************************************************************************************************/
+import { Handler } from 'express'
+import { Error } from 'mongoose'
+import { UploadedFile } from 'express-fileupload'
+import Organizacion, { IOrganizacion } from '../../models/organizacion_politica/organizacion'
+import Gobernador from '../../models/organizacion_politica/gobernador'
+import Consejero from '../../models/organizacion_politica/consejero'
+import Alcalde from '../../models/organizacion_politica/alcalde'
+import _ from 'lodash'
+import { saveLog } from '../admin/log.controller'
+import { parseNewDate24H_ } from '../../helpers/date'
+import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
+import { eventsLogs } from '../../models/admin/log'
+import { getPathUpload } from '../../helpers/host'
+import { getUrlFile, removeFile, storeFile } from '../../helpers/upload'
+
+/*******************************************************************************************************/
+// Variables generales del Controlador //
+/*******************************************************************************************************/
+const nombre_modulo: string = 'organizaciones_politicas'
+const nombre_submodulo: string = 'organizacion'
+const nombre_controlador: string = 'organizacion.controller'
+const exclude_campos = '-createdAt -updatedAt'
+const pagination = {
+  page: 1,
+  pageSize: 10
+}
+
+/*******************************************************************************************************/
+// Obtener todas las organizaciones políticas //
+/*******************************************************************************************************/
+export const getAll: Handler = async (req, res) => {
+  // Leemos el usuario y el query de la petición
+  const { usuario, query } = req
+
+  try {
+    // Definimos el query para las organizaciones politicas
+    const queryOrganizaciones = { anho: usuario.anho }
+
+    // Intentamos obtener el total de registros de las organizaciones políticas
+    const totalRegistros: number = await Organizacion.find(queryOrganizaciones).count()
+
+    // Obtenemos el número de registros por página y hacemos las validaciones
+    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
+    if (!validatePageSize.status) {
+      return res.status(404).json({
+        status: validatePageSize.status,
+        msg: validatePageSize.msg
+      })
+    }
+    const pageSize = validatePageSize.size
+
+    // Obtenemos el número total de páginas
+    const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
+
+    // Obtenemos el número de página y hacemos las validaciones
+    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
+    if (!validatePage.status) {
+      return res.status(404).json({
+        status: validatePage.status,
+        msg: validatePage.msg
+      })
+    }
+    const page = validatePage.page
+
+    // Intentamos realizar la búsqueda de todas las organizaciones politicas paginadas
+    const list: Array<IOrganizacion> = await Organizacion.find(queryOrganizaciones, exclude_campos)
+      .sort({ nombre: 'asc' })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+
+    // Retornamos la lista de organizaciones políticas
+    return res.json({
+      status: true,
+      pagina: page,
+      totalPaginas,
+      registros: list.length,
+      totalRegistros,
+      list
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log(
+      'Organizaciones Políticas',
+      'Obteniendo la lista de organizaciones políticas',
+      error
+    )
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener las organizaciones políticas'
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Obtener datos de una organización política //
+/*******************************************************************************************************/
+export const get: Handler = async (req, res) => {
+  // Leemos los parámetros de la petición
+  const { params } = req
+  // Obtenemos el Id de la organización política
+  const { id } = params
+
+  try {
+    // Intentamos realizar la búsqueda por id
+    const organizacion: IOrganizacion | null = await Organizacion.findById(id, exclude_campos)
+
+    // Retornamos los datos de la organización política encontrada
+    return res.json({
+      status: true,
+      organizacion
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log(
+      'Organizaciones Políticas',
+      'Obteniendo datos de la organización política',
+      id,
+      error
+    )
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los datos de la organización política'
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Crear una nueva organización política //
+/*******************************************************************************************************/
+export const create: Handler = async (req, res) => {
+  // Leemos las cabeceras, el usuario, el cuerpo y los archivos de la petición
+  const { headers, usuario, body, files } = req
+
+  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+  const { source, origin, ip, device, browser } = headers
+
+  try {
+    // Verificamos si ya existe la organización política
+    const organizacionU = await Organizacion.findOne({
+      nombre: body.nombre,
+      anho: usuario.anho
+    })
+    // Si existe una organización
+    if (organizacionU) {
+      return res.status(404).json({
+        status: false,
+        msg: `Ya existe la organización politica para estas elecciones ${usuario.anho}`
+      })
+    }
+
+    // Establecemos el año
+    body.anho = usuario.anho
+
+    // Creamos el modelo de una nueva organización política
+    const newOrganizacion: IOrganizacion = new Organizacion(body)
+
+    // Path o ruta del archivo
+    const path: string = 'organizaciones-politicas'
+    const pathUrl: string = 'organizaciones-politicas'
+    const pathDefault: string = `${getPathUpload()}/${pathUrl}/no-logo.png`
+
+    // Si existe un archivo de imagen obtenemos la url pública
+    if (files && Object.keys(files).length > 0 && files.file) {
+      newOrganizacion.logo = getUrlFile(<UploadedFile>files.file, pathUrl, newOrganizacion._id)
+    } else {
+      newOrganizacion.logo = pathDefault
+    }
+
+    // Intentamos guardar la nueva organización política
+    const organizacionOut: IOrganizacion = await newOrganizacion.save()
+
+    // Guardamos el log del evento
+    await saveLog({
+      usuario: usuario._id,
+      fuente: <string>source,
+      origen: <string>origin,
+      ip: <string>ip,
+      dispositivo: <string>device,
+      navegador: <string>browser,
+      modulo: nombre_modulo,
+      submodulo: nombre_submodulo,
+      controller: nombre_controlador,
+      funcion: 'create',
+      descripcion: 'Crear nueva organización política',
+      evento: eventsLogs.create,
+      data_in: '',
+      data_out: JSON.stringify(organizacionOut, null, 2),
+      procesamiento: 'unico',
+      registros: 1,
+      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+    })
+
+    // Si existe un archivo de imagen se crea la ruta y se almacena
+    if (files && Object.keys(files).length > 0 && files.file) {
+      await storeFile(<UploadedFile>files.file, path, newOrganizacion._id)
+    }
+
+    // Obtenemos la organización política creada
+    const organizacionResp: IOrganizacion | null = await Organizacion.findById(
+      organizacionOut._id,
+      exclude_campos
+    )
+
+    // Si existe un socket
+    if (globalThis.socketIO) {
+      // Emitimos el evento => organización política creada, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('organizacion-politica-creada')
+    }
+
+    // Retornamos la organización política creada
+    return res.json({
+      status: true,
+      msg: 'Se creó la organización política correctamente',
+      organizacion: organizacionResp
+    })
+  } catch (error: Error | any) {
+    // Mostramos el error en consola
+    console.log('Organizaciones Políticas', 'Crear nueva organización política', error)
+
+    // Inicializamos el mensaje de error
+    let msg: string = 'No se pudo crear la organización política'
+    // Si existe un error con validación de campo único
+    if (error?.errors) {
+      // Obtenemos el array de errores
+      const array: string[] = Object.keys(error.errors)
+      // Construimos el mensaje de error de acuerdo al campo
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    }
+
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Actualizar los datos de una organización política //
+/*******************************************************************************************************/
+export const update: Handler = async (req, res) => {
+  // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
+  const { headers, usuario, params, body, files } = req
+  // Obtenemos el Id de la organización política
+  const { id } = params
+
+  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+  const { source, origin, ip, device, browser } = headers
+
+  try {
+    // Intentamos obtener la organización política antes que se actualice
+    const organizacionIn: IOrganizacion | null = await Organizacion.findById(id)
+
+    // Path o ruta del archivo
+    const path: string = 'organizaciones-politicas'
+    const pathUrl: string = 'organizaciones-politicas'
+    const pathDefault: string = `${getPathUpload()}/${pathUrl}/no-logo.png`
+
+    // Si existe un archivo de imagen obtenemos la url pública
+    if (files && Object.keys(files).length > 0 && files.file) {
+      body.logo = getUrlFile(<UploadedFile>files.file, pathUrl, id)
+    } else {
+      body.logo = pathDefault
+    }
+
+    // Intentamos realizar la búsqueda por id y actualizamos
+    const organizacionOut = await Organizacion.findByIdAndUpdate(
+      id,
+      { $set: body },
+      {
+        new: true,
+        runValidators: true,
+        context: 'query'
+      }
+    )
+
+    // Guardamos el log del evento
+    await saveLog({
+      usuario: usuario._id,
+      fuente: <string>source,
+      origen: <string>origin,
+      ip: <string>ip,
+      dispositivo: <string>device,
+      navegador: <string>browser,
+      modulo: nombre_modulo,
+      submodulo: nombre_submodulo,
+      controller: nombre_controlador,
+      funcion: 'update',
+      descripcion: 'Actualizar una organización política',
+      evento: eventsLogs.update,
+      data_in: JSON.stringify(organizacionIn, null, 2),
+      data_out: JSON.stringify(organizacionOut, null, 2),
+      procesamiento: 'unico',
+      registros: 1,
+      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+    })
+
+    // Si existe un archivo de imagen se crea la ruta y se almacena
+    if (files && Object.keys(files).length > 0 && files.file) {
+      await storeFile(<UploadedFile>files.file, path, id)
+    }
+
+    // Obtenemos la organización política actualizada
+    const organizacionResp: IOrganizacion | null = await Organizacion.findById(id, exclude_campos)
+
+    // Si existe un socket
+    if (globalThis.socketIO) {
+      // Emitimos el evento => organización política actualizada, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('organizacion-politica-actualizada')
+    }
+
+    // Retornamos la organización política actualizada
+    return res.json({
+      status: true,
+      msg: 'Se actualizó la organización política correctamente',
+      organizacion: organizacionResp
+    })
+  } catch (error: Error | any) {
+    // Mostramos el error en consola
+    console.log('Organizaciones Políticas', 'Actualizando organización política', id, error)
+
+    // Inicializamos el mensaje de error
+    let msg: string = 'No se pudo actualizar los datos de la organización política'
+    // Si existe un error con validación de campo único
+    if (error?.errors) {
+      // Obtenemos el array de errores
+      const array: string[] = Object.keys(error.errors)
+      // Construimos el mensaje de error de acuerdo al campo
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    }
+
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Eliminar una organización política //
+/*******************************************************************************************************/
+export const remove: Handler = async (req, res) => {
+  // Leemos las cabeceras, el usuario y los parámetros de la petición
+  const { headers, usuario, params } = req
+  // Obtenemos el Id de la organización política
+  const { id } = params
+
+  // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del usuario
+  const { source, origin, ip, device, browser } = headers
+
+  try {
+    // Obtenemos la organización política antes que se elimine
+    const organizacionResp: IOrganizacion | null = await Organizacion.findById(id, exclude_campos)
+
+    // Intentamos realizar la búsqueda por id y removemos
+    const organizacionIn: IOrganizacion | null = await Organizacion.findByIdAndRemove(id)
+    // Removemos las dependencias gobernadores, consejeros y alcaldes
+    await Gobernador.deleteMany({ organizacion: id })
+    await Consejero.deleteMany({ organizacion: id })
+    await Alcalde.deleteMany({ organizacion: id })
+
+    // Guardamos el log del evento
+    await saveLog({
+      usuario: usuario._id,
+      fuente: <string>source,
+      origen: <string>origin,
+      ip: <string>ip,
+      dispositivo: <string>device,
+      navegador: <string>browser,
+      modulo: nombre_modulo,
+      submodulo: nombre_submodulo,
+      controller: nombre_controlador,
+      funcion: 'remove',
+      descripcion: 'Remover una organización política',
+      evento: eventsLogs.remove,
+      data_in: JSON.stringify(organizacionIn, null, 2),
+      data_out: '',
+      procesamiento: 'unico',
+      registros: 1,
+      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+    })
+
+    // Path o ruta del archivo
+    const path: string = 'organizaciones-politicas'
+    const pathUrl: string = 'organizaciones-politicas'
+    const pathDefault: string = `${getPathUpload()}/${pathUrl}/no-logo.png`
+
+    // Si existe un logo
+    if (organizacionIn && organizacionIn.logo && organizacionIn.logo !== pathDefault) {
+      removeFile(organizacionIn.logo, path)
+    }
+
+    // Si existe un socket
+    if (globalThis.socketIO) {
+      // Emitimos el evento => organización política eliminada, a todos los usuarios conectados //
+      globalThis.socketIO.broadcast.emit('organizacion-politica-eliminada')
+    }
+
+    // Retornamos la organización política eliminada
+    return res.json({
+      status: true,
+      msg: 'Se eliminó la organización política correctamente',
+      organizacion: organizacionResp
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('Organizaciones Políticas', 'Eliminando organización política', id, error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo eliminar la organización política'
+    })
+  }
+}

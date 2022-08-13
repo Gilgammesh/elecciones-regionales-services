@@ -113,10 +113,7 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Personero.find(queryPersoneros).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
@@ -129,11 +126,7 @@ export const getAll: Handler = async (req, res) => {
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
@@ -143,10 +136,7 @@ export const getAll: Handler = async (req, res) => {
     const page = validatePage.page
 
     // Intentamos realizar la búsqueda de todos los personeros paginados
-    const list: Array<IPersonero> = await Personero.find(
-      queryPersoneros,
-      exclude_campos
-    )
+    const list: Array<IPersonero> = await Personero.find(queryPersoneros, exclude_campos)
       .sort({ nombres: 'asc', apellidos: 'asc' })
       .populate('departamento', exclude_campos)
       .skip((page - 1) * pageSize)
@@ -163,11 +153,7 @@ export const getAll: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Obteniendo la lista de personeros',
-      error
-    )
+    console.log('Centros de Votación', 'Obteniendo la lista de personeros', error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -186,10 +172,10 @@ export const get: Handler = async (req, res) => {
   const { id } = params
   try {
     // Intentamos realizar la búsqueda por id
-    const personero: IPersonero | null = await Personero.findById(
-      id,
+    const personero: IPersonero | null = await Personero.findById(id, exclude_campos).populate(
+      'departamento',
       exclude_campos
-    ).populate('departamento', exclude_campos)
+    )
 
     // Retornamos los datos del personero encontrado
     return res.json({
@@ -198,12 +184,7 @@ export const get: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Obteniendo datos de personero',
-      id,
-      error
-    )
+    console.log('Centros de Votación', 'Obteniendo datos de personero', id, error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -305,9 +286,7 @@ export const create: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -392,17 +371,15 @@ export const update: Handler = async (req, res) => {
     })
 
     // Obtenemos el personero actualizado
-    const personeroResp: IPersonero | null = await Personero.findById(
-      id,
+    const personeroResp: IPersonero | null = await Personero.findById(id, exclude_campos).populate(
+      'departamento',
       exclude_campos
-    ).populate('departamento', exclude_campos)
+    )
 
     // Si existe un socket
     if (globalThis.socketIO) {
       // Emitimos el evento => personero actualizado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit(
-        'centros-votacion-personero-actualizado'
-      )
+      globalThis.socketIO.broadcast.emit('centros-votacion-personero-actualizado')
     }
 
     // Retornamos el personero actualizado
@@ -422,9 +399,7 @@ export const update: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -449,30 +424,18 @@ export const remove: Handler = async (req, res) => {
 
   try {
     // Obtenemos el personero antes que se elimine
-    const personeroResp: IPersonero | null = await Personero.findById(
-      id,
+    const personeroResp: IPersonero | null = await Personero.findById(id, exclude_campos).populate(
+      'departamento',
       exclude_campos
-    ).populate('departamento', exclude_campos)
+    )
 
     // Intentamos realizar la búsqueda por id y removemos
     const personeroIn: IPersonero | null = await Personero.findByIdAndRemove(id)
     // Removemos el personero de la mesa, local, provincia o distrito
-    await Mesa.updateMany(
-      { personero_mesa: id },
-      { $unset: { personero_mesa: 1 } }
-    )
-    await Mesa.updateMany(
-      { personero_local: id },
-      { $unset: { personero_local: 1 } }
-    )
-    await Mesa.updateMany(
-      { personero_distrito: id },
-      { $unset: { personero_distrito: 1 } }
-    )
-    await Mesa.updateMany(
-      { personero_provincia: id },
-      { $unset: { personero_provincia: 1 } }
-    )
+    await Mesa.updateMany({ personero_mesa: id }, { $unset: { personero_mesa: 1 } })
+    await Mesa.updateMany({ personero_local: id }, { $unset: { personero_local: 1 } })
+    await Mesa.updateMany({ personero_distrito: id }, { $unset: { personero_distrito: 1 } })
+    await Mesa.updateMany({ personero_provincia: id }, { $unset: { personero_provincia: 1 } })
 
     // Guardamos el log del evento
     await saveLog({
@@ -594,9 +557,7 @@ export const importExcel: Handler = async (req, res) => {
             // Encriptamos la contraseña personalizada, antes de guardarla
             const iniNo = `${row[0]}`.trim().slice(0, 1).toLocaleUpperCase()
             const iniAp = `${row[1]}`.trim().slice(0, 1).toLocaleUpperCase()
-            const pwdEncrypted: string | null = await encrypt(
-              `${row[2]}${iniNo}${iniAp}`
-            )
+            const pwdEncrypted: string | null = await encrypt(`${row[2]}${iniNo}${iniAp}`)
 
             // Creamos el modelo de un nuevo personero
             const newPersonero: IPersonero = new Personero({
@@ -640,9 +601,7 @@ export const importExcel: Handler = async (req, res) => {
         // Si existe un socket
         if (globalThis.socketIO) {
           // Emitimos el evento => personeros importados en el módulo centro de votación, a todos los usuarios conectados //
-          globalThis.socketIO.broadcast.emit(
-            'centros-votacion-personeros-importados'
-          )
+          globalThis.socketIO.broadcast.emit('centros-votacion-personeros-importados')
         }
 
         // Retornamos el detalle de los mensajes de error si existen
@@ -652,11 +611,7 @@ export const importExcel: Handler = async (req, res) => {
       }
     } catch (error) {
       // Mostramos el error en consola
-      console.log(
-        'Centros de Votación',
-        'Importando Excel de Personeros',
-        error
-      )
+      console.log('Centros de Votación', 'Importando Excel de Personeros', error)
       // Retornamos
       return res.status(404).json({
         status: false,
@@ -669,11 +624,7 @@ export const importExcel: Handler = async (req, res) => {
 /*******************************************************************************************************/
 // Función para validar los campos del excel de personeros //
 /*******************************************************************************************************/
-const validateFields = async (
-  row: Row,
-  index: number,
-  anho: number | undefined
-) => {
+const validateFields = async (row: Row, index: number, anho: number | undefined) => {
   // Validamos que nombres no esté vacio
   if (`${row[0]}` === '' || row[0] === null) {
     return `Fila ${index}: El campo nombres no puede estar vacio`

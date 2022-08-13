@@ -3,6 +3,7 @@
 /*******************************************************************************************************/
 import { Handler } from 'express'
 import { Error } from 'mongoose'
+import Departamento, { IDepartamento } from '../../models/ubigeo/departamento'
 import Provincia, { IProvincia } from '../../models/ubigeo/provincia'
 import { saveLog } from '../admin/log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
@@ -34,6 +35,86 @@ export const getAll: Handler = async (req, res) => {
     // Si existe un query por departament0
     if (query.departamento && query.departamento !== '') {
       queryProvincia = { ...queryProvincia, departamento: query.departamento }
+    }
+
+    // Intentamos obtener el total de registros de provincias de un departamento
+    const totalRegistros: number = await Provincia.find(queryProvincia).count()
+
+    // Obtenemos el número de registros por página y hacemos las validaciones
+    const validatePageSize: any = await getPageSize(
+      pagination.pageSize,
+      query.pageSize
+    )
+    if (!validatePageSize.status) {
+      return res.status(404).json({
+        status: validatePageSize.status,
+        msg: validatePageSize.msg
+      })
+    }
+    const pageSize = validatePageSize.size
+
+    // Obtenemos el número total de páginas
+    const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
+
+    // Obtenemos el número de página y hacemos las validaciones
+    const validatePage: any = await getPage(
+      pagination.page,
+      query.page,
+      totalPaginas
+    )
+    if (!validatePage.status) {
+      return res.status(404).json({
+        status: validatePage.status,
+        msg: validatePage.msg
+      })
+    }
+    const page = validatePage.page
+
+    // Intentamos realizar la búsqueda de todas las provincias de un departamento paginadas
+    const list = await Provincia.find(queryProvincia, exclude_campos)
+      .sort({ ubigeo: 'asc' })
+      .collation({ locale: 'es', numericOrdering: true })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+
+    // Retornamos la lista de provincias
+    return res.json({
+      status: true,
+      pagina: page,
+      totalPaginas,
+      registros: list.length,
+      totalRegistros,
+      list
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Obteniendo las provincias', error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener las provincias'
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Obtener todas las provincias //
+/*******************************************************************************************************/
+export const getAll_: Handler = async (req, res) => {
+  // Leemos el query de la petición
+  const { query } = req
+
+  try {
+    // Definimos el query para la provincia
+    let queryProvincia = {}
+
+    // Obtenemos los datos del departamento si existe
+    const departamento: IDepartamento | null = await Departamento.findById(
+      query.departamento
+    )
+    // Si existe un departamento
+    if (departamento) {
+      queryProvincia = { ...queryProvincia, departamento: departamento.codigo }
     }
 
     // Intentamos obtener el total de registros de provincias de un departamento
