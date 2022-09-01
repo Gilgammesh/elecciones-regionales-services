@@ -35,9 +35,9 @@ export const check: Handler = async (req, res) => {
     // Si existe una decodificación
     if (decoded?.personero?._id) {
       // Obtenemos los datos del personero actualizados
-      const personero: IPersonero | null = await Personero.findById(
-        decoded.personero._id
-      ).populate('departamento')
+      const personero: IPersonero | null = await Personero.findById(decoded.personero._id).populate(
+        'departamento'
+      )
 
       // Si existe el personero
       if (personero) {
@@ -60,7 +60,8 @@ export const check: Handler = async (req, res) => {
               codigo: personero.departamento.codigo,
               nombre: personero.departamento.nombre
             },
-            ...(eleccion && { anho: eleccion.anho }),
+            anho: eleccion?.anho,
+            fecha: eleccion?.fecha,
             asignado: personero.asignado,
             tipo: personero.tipo
           }
@@ -98,12 +99,7 @@ export const check: Handler = async (req, res) => {
     }
     if (error.name === 'TokenExpiredError') {
       // Mostramos el error en consola
-      console.log(
-        'App Chequeando token',
-        'TokenExpiredError',
-        error.message,
-        error.expiredAt
-      )
+      console.log('App Chequeando token', 'TokenExpiredError', error.message, error.expiredAt)
       // Obtenemos la fecha de expiración casteada del token
       const msg: string = parseJwtDateExpire(error.expiredAt)
       // Retornamos
@@ -114,12 +110,7 @@ export const check: Handler = async (req, res) => {
     }
     if (error.name === 'NotBeforeError') {
       // Mostramos el error en consola
-      console.log(
-        'App Chequeando token',
-        'NotBeforeError',
-        error.message,
-        error.date
-      )
+      console.log('App Chequeando token', 'NotBeforeError', error.message, error.date)
       // Retornamos
       return res.json({
         status: false,
@@ -137,16 +128,20 @@ export const login: Handler = async (req, res) => {
   const { body } = req
 
   try {
+    // Obtenemos los datos de las elecciones actuales
+    const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true })
+
     // Intentamos realizar la búsqueda por DNI del personero
     const personero: IPersonero | null = await Personero.findOne({
-      dni: body.dni
+      dni: body.dni,
+      anho: eleccion?.anho
     }).populate('departamento')
 
     // Verificamos si el personero existe
     if (!personero) {
       return res.json({
         status: false,
-        msg: 'El personero no existe'
+        msg: `Su cuenta no es válida, para estas elecciones ${eleccion?.anho}`
       })
     }
 
@@ -154,7 +149,7 @@ export const login: Handler = async (req, res) => {
     if (personero.estado === false) {
       return res.json({
         status: false,
-        msg: 'El personero está deshabilitado'
+        msg: 'Su cuenta está deshabilitado'
       })
     }
 
@@ -164,12 +159,9 @@ export const login: Handler = async (req, res) => {
     if (pwdIsValid === false) {
       return res.json({
         status: false,
-        msg: 'La contraseña no es válida'
+        msg: 'Su contraseña no es válida'
       })
     }
-
-    // Obtenemos los datos de las elecciones actuales
-    const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true })
 
     // Definimos los datos del personero enviados en la respuesta
     const personeroResponse: IPersoneroResponse = {
@@ -183,7 +175,8 @@ export const login: Handler = async (req, res) => {
         codigo: personero.departamento.codigo,
         nombre: personero.departamento.nombre
       },
-      ...(eleccion && { anho: eleccion.anho }),
+      anho: eleccion?.anho,
+      fecha: eleccion?.fecha,
       asignado: personero.asignado,
       tipo: personero.tipo
     }
@@ -196,10 +189,7 @@ export const login: Handler = async (req, res) => {
     }
 
     // Generamos el token del personero
-    const token: string | null = await generateTokenWithTime(
-      payload,
-      tokenTimeApp
-    )
+    const token: string | null = await generateTokenWithTime(payload, tokenTimeApp)
 
     // Retornamos el token y datos del personero
     return res.json({
@@ -214,7 +204,7 @@ export const login: Handler = async (req, res) => {
     // Retornamos
     return res.json({
       status: false,
-      msg: 'Hubo un error en la validación del personero'
+      msg: 'Hubo un error en la validación de su cuenta'
     })
   }
 }
@@ -256,26 +246,6 @@ export const token: Handler = async (req, res) => {
         status: false,
         msg: 'La contraseña no es válida'
       })
-    }
-
-    // Obtenemos los datos de las elecciones actuales
-    const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true })
-
-    // Definimos los datos del personero enviados en la respuesta
-    const personeroResponse: IPersoneroResponse = {
-      _id: personero._id,
-      nombres: personero.nombres,
-      apellidos: personero.apellidos,
-      dni: personero.dni,
-      celular: personero.celular,
-      departamento: {
-        _id: personero.departamento._id,
-        codigo: personero.departamento.codigo,
-        nombre: personero.departamento.nombre
-      },
-      ...(eleccion && { anho: eleccion.anho }),
-      asignado: personero.asignado,
-      tipo: personero.tipo
     }
 
     // Definimos el objeto payload

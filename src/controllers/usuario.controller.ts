@@ -64,10 +64,7 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Usuario.find(queryUsuario).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
@@ -80,11 +77,7 @@ export const getAll: Handler = async (req, res) => {
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
@@ -94,10 +87,7 @@ export const getAll: Handler = async (req, res) => {
     const page = validatePage.page
 
     // Intentamos realizar la búsqueda de todos los usuarios paginados
-    const list: Array<IUsuario> = await Usuario.find(
-      queryUsuario,
-      exclude_campos
-    )
+    const list: Array<IUsuario> = await Usuario.find(queryUsuario, exclude_campos)
       .sort({ nombres: 'asc', apellidos: 'asc' })
       .populate('rol', exclude_campos)
       .populate('departamento', exclude_campos)
@@ -206,11 +196,7 @@ export const create: Handler = async (req, res) => {
 
       // Si existe un archivo de imagen obtenemos la url pública
       if (files && Object.keys(files).length > 0 && files.file) {
-        newUsuario.img = getUrlFile(
-          <UploadedFile>files.file,
-          'usuarios',
-          newUsuario._id
-        )
+        newUsuario.img = getUrlFile(<UploadedFile>files.file, 'usuarios', newUsuario._id)
       }
 
       // Intentamos guardar el nuevo usuario
@@ -243,10 +229,7 @@ export const create: Handler = async (req, res) => {
       }
 
       // Obtenemos el usuario creado
-      const usuarioResp: IUsuario | null = await Usuario.findById(
-        usuarioOut._id,
-        exclude_campos
-      )
+      const usuarioResp: IUsuario | null = await Usuario.findById(usuarioOut._id, exclude_campos)
         .populate('rol', exclude_campos)
         .populate('departamento', exclude_campos)
 
@@ -280,9 +263,7 @@ export const create: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -393,10 +374,7 @@ export const update: Handler = async (req, res) => {
     }
 
     // Obtenemos el usuario actualizado
-    const usuarioResp: IUsuario | null = await Usuario.findById(
-      id,
-      exclude_campos
-    )
+    const usuarioResp: IUsuario | null = await Usuario.findById(id, exclude_campos)
       .populate('rol', exclude_campos)
       .populate('departamento', exclude_campos)
 
@@ -423,9 +401,7 @@ export const update: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -450,10 +426,7 @@ export const remove: Handler = async (req, res) => {
 
   try {
     // Obtenemos el usuario antes que se elimine
-    const usuarioResp: IUsuario | null = await Usuario.findById(
-      id,
-      exclude_campos
-    )
+    const usuarioResp: IUsuario | null = await Usuario.findById(id, exclude_campos)
       .populate('rol', exclude_campos)
       .populate('departamento', exclude_campos)
 

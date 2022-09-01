@@ -3,6 +3,7 @@
 /*******************************************************************************************************/
 import { Handler } from 'express'
 import { Error } from 'mongoose'
+import { Socket } from 'socket.io'
 import Accion, { IAccion } from '../../models/admin/accion'
 import { saveLog } from './log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
@@ -33,10 +34,7 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Accion.countDocuments()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
@@ -49,11 +47,7 @@ export const getAll: Handler = async (req, res) => {
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
@@ -156,12 +150,9 @@ export const create: Handler = async (req, res) => {
     })
 
     // Obtenemos la accion creada
-    const accionResp: IAccion | null = await Accion.findById(
-      accionOut._id,
-      exclude_campos
-    )
+    const accionResp: IAccion | null = await Accion.findById(accionOut._id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
       // Emitimos el evento => acción creada en el módulo administrador, a todos los usuarios conectados //
       globalThis.socketIO.broadcast.emit('admin-accion-creada')
@@ -184,9 +175,7 @@ export const create: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -267,9 +256,7 @@ export const update: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos

@@ -23,6 +23,7 @@ export interface IPersoneroResponse {
     nombre?: string
   }
   anho?: number
+  fecha?: string
   asignado?: boolean
   tipo?: string
 }
@@ -54,9 +55,9 @@ export const validarToken: Handler = async (req, res, next) => {
     // Si existe una decodificación
     if (decoded?.personero?._id) {
       // Obtenemos los datos del personero actualizados
-      const personero: IPersonero | null = await Personero.findById(
-        decoded.personero._id
-      ).populate('departamento')
+      const personero: IPersonero | null = await Personero.findById(decoded.personero._id).populate(
+        'departamento'
+      )
 
       // Si existe el personero
       if (personero) {
@@ -75,7 +76,8 @@ export const validarToken: Handler = async (req, res, next) => {
               _id: personero.departamento._id,
               codigo: personero.departamento.codigo
             },
-            ...(eleccion && { anho: eleccion.anho })
+            anho: eleccion?.anho,
+            fecha: eleccion?.fecha
           }
 
           // Almacenamos los datos del personero actualizado en el request
@@ -101,11 +103,7 @@ export const validarToken: Handler = async (req, res, next) => {
     // Capturamos los tipos de error en la vericación
     if (error.name === 'JsonWebTokenError') {
       // Mostramos el error en consola
-      console.log(
-        'App Autenticando token Middleware',
-        'JsonWebTokenError',
-        error.message
-      )
+      console.log('App Autenticando token Middleware', 'JsonWebTokenError', error.message)
       // Retornamos
       return res.json({
         status: false,
@@ -130,12 +128,7 @@ export const validarToken: Handler = async (req, res, next) => {
     }
     if (error.name === 'NotBeforeError') {
       // Mostramos el error en consola
-      console.log(
-        'App Autenticando token Middleware',
-        'NotBeforeError',
-        error.message,
-        error.date
-      )
+      console.log('App Autenticando token Middleware', 'NotBeforeError', error.message, error.date)
       // Retornamos
       return res.json({
         status: false,

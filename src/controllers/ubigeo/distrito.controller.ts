@@ -3,6 +3,8 @@
 /*******************************************************************************************************/
 import { Handler } from 'express'
 import { Error } from 'mongoose'
+import Departamento, { IDepartamento } from '../../models/ubigeo/departamento'
+import Provincia, { IProvincia } from '../../models/ubigeo/provincia'
 import Distrito, { IDistrito } from '../../models/ubigeo/distrito'
 import { saveLog } from '../admin/log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
@@ -38,6 +40,95 @@ export const getAll: Handler = async (req, res) => {
     // Si existe un query por provincia
     if (query.provincia && query.provincia !== '') {
       queryDistrito = { ...queryDistrito, provincia: query.provincia }
+    }
+
+    // Intentamos obtener el total de registros de distritos de una provincia y departamento
+    const totalRegistros: number = await Distrito.find(queryDistrito).count()
+
+    // Obtenemos el número de registros por página y hacemos las validaciones
+    const validatePageSize: any = await getPageSize(
+      pagination.pageSize,
+      query.pageSize
+    )
+    if (!validatePageSize.status) {
+      return res.status(404).json({
+        status: validatePageSize.status,
+        msg: validatePageSize.msg
+      })
+    }
+    const pageSize = validatePageSize.size
+
+    // Obtenemos el número total de páginas
+    const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
+
+    // Obtenemos el número de página y hacemos las validaciones
+    const validatePage: any = await getPage(
+      pagination.page,
+      query.page,
+      totalPaginas
+    )
+    if (!validatePage.status) {
+      return res.status(404).json({
+        status: validatePage.status,
+        msg: validatePage.msg
+      })
+    }
+    const page = validatePage.page
+
+    // Intentamos realizar la búsqueda de todos los distritos de una provincia y departamento paginados
+    const list = await Distrito.find(queryDistrito, exclude_campos)
+      .sort({ ubigeo: 'asc' })
+      .collation({ locale: 'es', numericOrdering: true })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+
+    // Retornamos la lista de distritos
+    return res.json({
+      status: true,
+      pagina: page,
+      totalPaginas,
+      registros: list.length,
+      totalRegistros,
+      list
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('Ubigeo', 'Obteniendo los distritos', error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los distritos'
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Obtener todos los distritos //
+/*******************************************************************************************************/
+export const getAll_: Handler = async (req, res) => {
+  // Leemos el query de la petición
+  const { query } = req
+
+  try {
+    // Definimos el query para el distrito
+    let queryDistrito = {}
+
+    // Obtenemos los datos del departamento si existe
+    const departamento: IDepartamento | null = await Departamento.findById(
+      query.departamento
+    )
+    // Si existe un departamento
+    if (departamento) {
+      queryDistrito = { ...queryDistrito, departamento: departamento.codigo }
+    }
+
+    // Obtenemos los datos de la provincia si existe si existe
+    const provincia: IProvincia | null = await Provincia.findById(
+      query.provincia
+    )
+    // Si existe una provincia
+    if (provincia) {
+      queryDistrito = { ...queryDistrito, provincia: provincia.codigo }
     }
 
     // Intentamos obtener el total de registros de distritos de una provincia y departamento

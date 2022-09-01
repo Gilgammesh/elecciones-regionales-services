@@ -123,10 +123,7 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Mesa.find(queryMesas).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
@@ -139,11 +136,7 @@ export const getAll: Handler = async (req, res) => {
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
@@ -177,11 +170,7 @@ export const getAll: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Obteniendo la lista de mesas de votación',
-      error
-    )
+    console.log('Centros de Votación', 'Obteniendo la lista de mesas de votación', error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -217,12 +206,7 @@ export const get: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Obteniendo datos de mesa de votación',
-      id,
-      error
-    )
+    console.log('Centros de Votación', 'Obteniendo datos de mesa de votación', id, error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -247,7 +231,7 @@ export const create: Handler = async (req, res) => {
       mesa: body.mesa,
       anho: usuario.anho
     })
-    //
+    // Si existe una mesa
     if (mesaU) {
       return res.status(404).json({
         status: false,
@@ -343,10 +327,7 @@ export const create: Handler = async (req, res) => {
     })
 
     // Obtenemos la mesa de votación creada
-    const mesaResp: IMesa | null = await Mesa.findById(
-      mesaOut._id,
-      exclude_campos
-    )
+    const mesaResp: IMesa | null = await Mesa.findById(mesaOut._id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -371,9 +352,7 @@ export const create: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -546,10 +525,7 @@ export const update: Handler = async (req, res) => {
               { new: true }
             )
           }
-          if (
-            body.personero_mesa &&
-            body.personero_mesa !== mesaIn.personero_mesa
-          ) {
+          if (body.personero_mesa && body.personero_mesa !== mesaIn.personero_mesa) {
             await Personero.findByIdAndUpdate(
               mesaIn.personero_mesa,
               {
@@ -603,10 +579,7 @@ export const update: Handler = async (req, res) => {
               }
             )
           }
-          if (
-            body.personero_local &&
-            body.personero_local !== mesaIn.personero_local
-          ) {
+          if (body.personero_local && body.personero_local !== mesaIn.personero_local) {
             await Personero.findByIdAndUpdate(
               mesaIn.personero_local,
               {
@@ -695,12 +668,7 @@ export const update: Handler = async (req, res) => {
     })
   } catch (error: Error | any) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Actualizando mesa de votación',
-      id,
-      error
-    )
+    console.log('Centros de Votación', 'Actualizando mesa de votación', id, error)
 
     // Inicializamos el mensaje de error
     let msg: string = 'No se pudo actualizar los datos de la mesa de votación'
@@ -709,9 +677,7 @@ export const update: Handler = async (req, res) => {
       // Obtenemos el array de errores
       const array: string[] = Object.keys(error.errors)
       // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
     }
 
     // Retornamos
@@ -849,10 +815,7 @@ export const getPersoneros: Handler = async (req, res) => {
     const totalRegistros: number = await Personero.find(queryPersoneros).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
@@ -865,11 +828,7 @@ export const getPersoneros: Handler = async (req, res) => {
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
@@ -879,10 +838,7 @@ export const getPersoneros: Handler = async (req, res) => {
     const page = validatePage.page
 
     // Intentamos realizar la búsqueda de todos los personeros paginados
-    const list: Array<IPersonero> = await Personero.find(
-      queryPersoneros,
-      exclude_campos
-    )
+    const list: Array<IPersonero> = await Personero.find(queryPersoneros, exclude_campos)
       .sort({ nombres: 'asc', apellidos: 'asc' })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
@@ -984,35 +940,14 @@ export const createTemplate: Handler = async (req, res) => {
     ws1.column(9).setWidth(19)
 
     // Creamos los campos de la cabecera de la tabla
-    ws1
-      .cell(1, 1)
-      .string('Número de Mesa \n (código de 06 dígitos numéricos)')
-      .style(styleHead)
-    ws1
-      .cell(1, 2)
-      .string('Personero de Mesa \n (Elegir de la lista)')
-      .style(styleHead)
-    ws1
-      .cell(1, 3)
-      .string('Local de Votación \n (Nombre del local de votación)')
-      .style(styleHead)
-    ws1
-      .cell(1, 4)
-      .string('Personero de Local \n (Elegir de la lista)')
-      .style(styleHead)
-    ws1
-      .cell(1, 5)
-      .string('Departamento \n (Nombre del departamento)')
-      .style(styleHead)
-    ws1
-      .cell(1, 6)
-      .string('Provincia \n (Nombre de la provincia)')
-      .style(styleHead)
+    ws1.cell(1, 1).string('Número de Mesa \n (código de 06 dígitos numéricos)').style(styleHead)
+    ws1.cell(1, 2).string('Personero de Mesa \n (Elegir de la lista)').style(styleHead)
+    ws1.cell(1, 3).string('Local de Votación \n (Nombre del local de votación)').style(styleHead)
+    ws1.cell(1, 4).string('Personero de Local \n (Elegir de la lista)').style(styleHead)
+    ws1.cell(1, 5).string('Departamento \n (Nombre del departamento)').style(styleHead)
+    ws1.cell(1, 6).string('Provincia \n (Nombre de la provincia)').style(styleHead)
     ws1.cell(1, 7).string('Distrito \n (Nombre del distrito)').style(styleHead)
-    ws1
-      .cell(1, 8)
-      .string('Ubigeo \n (código de 06 dígitos numéricos)')
-      .style(styleHead)
+    ws1.cell(1, 8).string('Ubigeo \n (código de 06 dígitos numéricos)').style(styleHead)
     ws1.cell(1, 9).string('Votantes \n (cantidad numérica)').style(styleHead)
 
     if (body.tipo === 'new') {
@@ -1036,10 +971,7 @@ export const createTemplate: Handler = async (req, res) => {
         {
           anho: usuario.anho,
           departamento: dptoId,
-          $or: [
-            { personero_mesa: { $exists: false } },
-            { personero_local: { $exists: false } }
-          ]
+          $or: [{ personero_mesa: { $exists: false } }, { personero_local: { $exists: false } }]
         },
         exclude_campos
       )
@@ -1136,11 +1068,7 @@ export const createTemplate: Handler = async (req, res) => {
     const promisesPers = personeros.map(async (row, index) => {
       ws2
         .cell(index + rowStart2, 1)
-        .string(
-          `${row.nombres.toUpperCase()} ${row.apellidos.toUpperCase()} (${
-            row.dni
-          })`
-        )
+        .string(`${row.nombres.toUpperCase()} ${row.apellidos.toUpperCase()} (${row.dni})`)
         .style(styleCell)
       rowFinish2 = index + rowStart2
     })
@@ -1161,12 +1089,7 @@ export const createTemplate: Handler = async (req, res) => {
     })
 
     // Definimos la carpeta de la plantilla
-    const path = join(
-      __dirname,
-      '../../../uploads',
-      'centros-votacion',
-      'mesas'
-    )
+    const path = join(__dirname, '../../../uploads', 'centros-votacion', 'mesas')
     // Si no existe la carpeta la creamos
     if (!fs.existsSync(path)) {
       fs.mkdirSync(path, { recursive: true })
@@ -1187,12 +1110,7 @@ export const createTemplate: Handler = async (req, res) => {
       url
     })
   } catch (error) {
-    console.log(
-      'Centros de Votación',
-      'Mesas',
-      'Creando plantilla de mesas',
-      error
-    )
+    console.log('Centros de Votación', 'Mesas', 'Creando plantilla de mesas', error)
     return res.status(400).json({
       status: false,
       msg: 'No se pudo crear la plantilla de mesas y locales votación'
@@ -1230,9 +1148,7 @@ export const importExcel: Handler = async (req, res) => {
 
       // Obtenemos el departamento según sea el caso
       const codDpto: string =
-        usuario && usuario.rol.super
-          ? body.departamento
-          : usuario.departamento?.codigo
+        usuario && usuario.rol.super ? body.departamento : usuario.departamento?.codigo
 
       // Obtenemos las filas de la plantilla de excel
       const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
@@ -1250,20 +1166,13 @@ export const importExcel: Handler = async (req, res) => {
       const promises = rows.map(async (row, index) => {
         // Si el index es mayor o igual al fila de inicio
         if (index >= rowStart) {
-          const msg = await validateFields(
-            body.tipo,
-            row,
-            index,
-            codDpto,
-            usuario.anho as number
-          )
+          const msg = await validateFields(body.tipo, row, index, codDpto, usuario.anho as number)
           // Si pasó las validaciones
           if (msg === 'ok') {
             // Obtenemos los datos del departamento si existe
-            const departamento: IDepartamento | null =
-              await Departamento.findOne({
-                codigo: `${row[7]}`.substring(0, 2)
-              })
+            const departamento: IDepartamento | null = await Departamento.findOne({
+              codigo: `${row[7]}`.substring(0, 2)
+            })
             // Obtenemos los datos de la provincia si existe
             const provincia: IProvincia | null = await Provincia.findOne({
               codigo: `${row[7]}`.substring(2, 4),
@@ -1411,10 +1320,7 @@ export const importExcel: Handler = async (req, res) => {
                       { new: true }
                     )
                   }
-                  if (
-                    personeroMesa &&
-                    personeroMesa._id !== mesaIn.personero_mesa
-                  ) {
+                  if (personeroMesa && personeroMesa._id !== mesaIn.personero_mesa) {
                     await Personero.findByIdAndUpdate(
                       mesaIn.personero_mesa,
                       {
@@ -1468,10 +1374,7 @@ export const importExcel: Handler = async (req, res) => {
                       }
                     )
                   }
-                  if (
-                    personeroLocal &&
-                    personeroLocal._id !== mesaIn.personero_local
-                  ) {
+                  if (personeroLocal && personeroLocal._id !== mesaIn.personero_local) {
                     await Personero.findByIdAndUpdate(
                       mesaIn.personero_local,
                       {
@@ -1549,11 +1452,7 @@ export const importExcel: Handler = async (req, res) => {
       }
     } catch (error) {
       // Mostramos el error en consola
-      console.log(
-        'Centros de Votación',
-        'Importando Excel de Mesas de Votación',
-        error
-      )
+      console.log('Centros de Votación', 'Importando Excel de Mesas de Votación', error)
       // Retornamos
       return res.status(404).json({
         status: false,
@@ -1604,10 +1503,7 @@ const validateFields = async (
   })
   // Validamos que exista la provincia
   if (!provincia) {
-    return `Fila ${index}: La provincia ${`${row[7]}`.substring(
-      2,
-      4
-    )} no existe`
+    return `Fila ${index}: La provincia ${`${row[7]}`.substring(2, 4)} no existe`
   }
   // Obtenemos los datos del distrito si existe
   const distrito: IDistrito | null = await Distrito.findOne({
@@ -1711,11 +1607,7 @@ export const getLocales: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Obteniendo la lista de locales de votación',
-      error
-    )
+    console.log('Centros de Votación', 'Obteniendo la lista de locales de votación', error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -1809,11 +1701,7 @@ export const getMesas: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Centros de Votación',
-      'Obteniendo la lista de mesas de votación',
-      error
-    )
+    console.log('Centros de Votación', 'Obteniendo la lista de mesas de votación', error)
     // Retornamos
     return res.status(404).json({
       status: false,

@@ -2,16 +2,16 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Schema, model, Document } from 'mongoose'
-import uniqueValidator from 'mongoose-unique-validator'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
 /*******************************************************************************************************/
-export interface IEleccion extends Document {
+export interface IOrganizacion extends Document {
+  nombre: string
+  siglas?: string
+  logo: string
   anho: number
-  tipo: string
-  fecha: string
-  actual: boolean
+  estado: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -19,43 +19,36 @@ export interface IEleccion extends Document {
 /*******************************************************************************************************/
 // Creamos el schema y definimos los nombres y tipos de datos //
 /*******************************************************************************************************/
-const EleccionSchema: Schema = new Schema(
+const OrganizacionSchema: Schema = new Schema(
   {
+    nombre: {
+      type: String,
+      required: [true, 'El nombre es requerido'],
+      trim: true
+    },
+    siglas: String,
+    logo: {
+      type: String,
+      required: [true, 'El logo es requerido']
+    },
     anho: {
       type: Number,
-      unique: true,
       required: [true, 'El año es requerido']
     },
-    tipo: {
-      type: String,
-      enum: {
-        values: ['regional', 'general'],
-        message: '{VALUE}, no es un tipo de elecciones válido. Elija entre: regional | general'
-      },
-      required: [true, 'El tipo de elecciones es requerido']
-    },
-    fecha: String,
-    actual: {
+    estado: {
       type: Boolean,
-      default: false,
+      default: true,
       required: true
     }
   },
   {
-    collection: 'elecciones',
+    collection: 'organizaciones_politicas',
     timestamps: true,
     versionKey: false
   }
 )
 
 /*******************************************************************************************************/
-// Validamos los campos que son únicos, con mensaje personalizado //
-/*******************************************************************************************************/
-EleccionSchema.plugin(uniqueValidator, {
-  message: '{VALUE}, ya se encuentra registrado'
-})
-
-/*******************************************************************************************************/
 // Exportamos el modelo de datos //
 /*******************************************************************************************************/
-export default model<IEleccion>('Eleccion', EleccionSchema)
+export default model<IOrganizacion>('OrganizacionPolitica', OrganizacionSchema)
