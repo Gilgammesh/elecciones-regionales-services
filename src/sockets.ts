@@ -2,10 +2,10 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Server as HttpServer } from 'http'
-import { Socket, Server } from 'socket.io'
-import jwt, { VerifyErrors } from 'jsonwebtoken'
+import { Socket, Server as WebsocketServer } from 'socket.io'
+import { verify, VerifyErrors, JwtPayload } from 'jsonwebtoken'
 import moment from 'moment-timezone'
-import { appSecret, corsOptions, timeZone } from '../configs'
+import { appSecret, corsOptions, timeZone } from './configs'
 
 /*******************************************************************************************************/
 // Función para Crear e Inicializar el servidor Socket IO //
@@ -14,12 +14,14 @@ const sockets = (httpServer: HttpServer) => {
   /////////////////////////////////////////////////////////////////////////////////////
   // Creamos el Servidor SocketIO => pasamos el servidor http y las opciones de cors //
   /////////////////////////////////////////////////////////////////////////////////////
-  const io = new Server(httpServer, {
+  const io = new WebsocketServer(httpServer, {
     cors: corsOptions
   })
+  // Guardamos el servidor socketIO como variable global
+  globalThis.socketIO = io
 
   ///////////////////////////////////////////////////////////////////
-  // Middleware para authenticacion el token enviado con el socket //
+  // Middleware para autenticar el token enviado con el socket     //
   ///////////////////////////////////////////////////////////////////
   io.use((socket, next) => {
     // Obtenemos el token de autorización del websocket
@@ -29,18 +31,14 @@ const sockets = (httpServer: HttpServer) => {
     if (token && token !== '') {
       try {
         // Intentamos verificar el token, con el texto secreto de la aplicación
-        jwt.verify(token, appSecret)
+        verify(token, appSecret)
         // Pasamos a la siguiente función
         next()
       } catch (error: VerifyErrors | any) {
         // Si existe un error
         if (error.name === 'JsonWebTokenError') {
           // Mostramos el error en consola
-          console.log(
-            'Autenticando token Socket Middleware',
-            'JsonWebTokenError',
-            error.message
-          )
+          console.log('Autenticando token Socket Middleware', 'JsonWebTokenError', error.message)
           // Generamos el error
           next(new Error(`El token proporcionado es inválido`))
         }
@@ -60,11 +58,7 @@ const sockets = (httpServer: HttpServer) => {
           const fecha = `${dayNro} de ${monthName} de ${year}`
           const hora = date.format('hh:mm:ss a')
           // Generamos el error
-          next(
-            new Error(
-              `El token proporcionado ha expirado el ${fecha} a las ${hora}`
-            )
-          )
+          next(new Error(`El token proporcionado ha expirado el ${fecha} a las ${hora}`))
         }
         if (error.name === 'NotBeforeError') {
           // Mostramos el error en consola
@@ -92,25 +86,68 @@ const sockets = (httpServer: HttpServer) => {
   // Evento cuando se establece la conexión con el socket //
   //////////////////////////////////////////////////////////
   io.on('connection', (socket: Socket) => {
-    // Mostramos la conexión iniciada
-    console.log('Cliente', socket.id, '->', 'conectado', socket.connected)
+    // Obtenemos el token de autorización del websocket
+    const { token } = socket.handshake.auth
+    const decoded: JwtPayload = <JwtPayload>verify(token, appSecret)
 
-    // Emitimos el evento => sesión actualizada en el módulo monitor, a todos los usuarios conectados //
-    socket.broadcast.emit('monitor-sesion-actualizada')
-
-    // Mostramos la desconexión
-    socket.on('disconnect', () => {
+    if (decoded && decoded.usuario) {
+      // Mostramos la conexión iniciada
       console.log(
-        'Cliente',
+        'Cliente Web',
         socket.id,
         '->',
-        'desconectado',
-        socket.disconnected
+        'Usuario',
+        decoded.usuario._id,
+        '->',
+        'conectado',
+        socket.connected
       )
-    })
+      // Suscribimos al socket al room intranet
+      socket.join('intranet')
 
-    // Pasamos el valor del socket a la variable global socketIO
-    globalThis.socketIO = socket
+      // Mostramos la desconexión
+      socket.on('disconnect', () => {
+        console.log(
+          'Cliente Web',
+          socket.id,
+          '->',
+          'Usuario',
+          decoded.usuario._id,
+          '->',
+          'desconectado',
+          socket.disconnected
+        )
+      })
+    }
+    if (decoded && decoded.personero) {
+      // Mostramos la conexión iniciada
+      console.log(
+        'Cliente App',
+        socket.id,
+        '->',
+        'Personero',
+        decoded.personero._id,
+        '->',
+        'conectado',
+        socket.connected
+      )
+      // Suscribimos al socket al room app
+      socket.join('app')
+
+      // Mostramos la desconexión
+      socket.on('disconnect', () => {
+        console.log(
+          'Cliente App',
+          socket.id,
+          '->',
+          'Personero',
+          decoded.personero._id,
+          '->',
+          'desconectado',
+          socket.disconnected
+        )
+      })
+    }
   })
 }
 

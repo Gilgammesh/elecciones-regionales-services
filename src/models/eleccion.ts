@@ -1,9 +1,8 @@
 /*******************************************************************************************************/
 // Importamos las dependencias //
 /*******************************************************************************************************/
-import { Schema, model, Document, PopulatedDoc } from 'mongoose'
+import { Schema, model, Document } from 'mongoose'
 import uniqueValidator from 'mongoose-unique-validator'
-import validator from 'validator'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
@@ -11,6 +10,7 @@ import validator from 'validator'
 export interface IEleccion extends Document {
   anho: number
   tipo: string
+  fecha: string
   actual: boolean
   createdAt: Date
   updatedAt: Date
@@ -30,11 +30,11 @@ const EleccionSchema: Schema = new Schema(
       type: String,
       enum: {
         values: ['regional', 'general'],
-        message:
-          '{VALUE}, no es un tipo de elecciones válido. Elija entre: regional | general'
+        message: '{VALUE}, no es un tipo de elecciones válido. Elija entre: regional | general'
       },
       required: [true, 'El tipo de elecciones es requerido']
     },
+    fecha: String,
     actual: {
       type: Boolean,
       default: false,

@@ -25,9 +25,15 @@ export interface IMesa extends Document {
   personero_mesa?: PopulatedDoc<IPersonero>
   votantes?: number
   anho: number
-  enviado: false
+  acta_reg: string
+  acta_prov: string
   createdAt: Date
   updatedAt: Date
+}
+export enum EActaEstadoMesa {
+  Enviado = 'enviado',
+  PorEnviar = 'por enviar',
+  Reabierto = 'reabierto'
 }
 
 /*******************************************************************************************************/
@@ -93,9 +99,19 @@ const MesaSchema: Schema = new Schema(
     },
     votantes: Number,
     anho: Number,
-    enviado: {
-      type: Boolean,
-      default: true
+    acta_reg: {
+      type: String,
+      enum: {
+        values: ['enviado', 'por enviar', 'reabierto']
+      },
+      default: 'por enviar'
+    },
+    acta_prov: {
+      type: String,
+      enum: {
+        values: ['enviado', 'por enviar', 'reabierto']
+      },
+      default: 'por enviar'
     }
   },
   {
