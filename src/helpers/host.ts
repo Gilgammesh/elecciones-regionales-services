@@ -8,7 +8,7 @@ import { appEnvironment, appHost, appPort } from '../configs'
 /*******************************************************************************************************/
 export const getHost = () => {
   // Nombre del host
-  let host: string = ''
+  let host = ''
   if (appEnvironment === 'development') {
     host = `${appHost}:${appPort}`
   }
@@ -24,7 +24,7 @@ export const getHost = () => {
 /*******************************************************************************************************/
 export const getPathUpload = () => {
   // Nombre de la ruta
-  let path: string = ''
+  let path = ''
   if (appEnvironment === 'development') {
     path = `${appHost}:${appPort}/uploads`
   }

@@ -2,7 +2,13 @@
 // Requerimos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken'
+import {
+  verify,
+  JwtPayload,
+  NotBeforeError,
+  TokenExpiredError,
+  JsonWebTokenError
+} from 'jsonwebtoken'
 import Personero, { IPersonero } from '../../models/centro_votacion/personero'
 import Eleccion, { IEleccion } from '../../models/eleccion'
 import { parseJwtDateExpire } from '../../helpers/date'
@@ -99,9 +105,9 @@ export const validarToken: Handler = async (req, res, next) => {
         })
       }
     }
-  } catch (error: VerifyErrors | any) {
+  } catch (error: unknown) {
     // Capturamos los tipos de error en la vericación
-    if (error.name === 'JsonWebTokenError') {
+    if (error instanceof JsonWebTokenError && error.name === 'JsonWebTokenError') {
       // Mostramos el error en consola
       console.log('App Autenticando token Middleware', 'JsonWebTokenError', error.message)
       // Retornamos
@@ -110,7 +116,7 @@ export const validarToken: Handler = async (req, res, next) => {
         msg: 'El token proporcionado es inválido'
       })
     }
-    if (error.name === 'TokenExpiredError') {
+    if (error instanceof TokenExpiredError && error.name === 'TokenExpiredError') {
       // Mostramos el error en consola
       console.log(
         'App Autenticando token Middleware',
@@ -126,7 +132,7 @@ export const validarToken: Handler = async (req, res, next) => {
         msg
       })
     }
-    if (error.name === 'NotBeforeError') {
+    if (error instanceof NotBeforeError && error.name === 'NotBeforeError') {
       // Mostramos el error en consola
       console.log('App Autenticando token Middleware', 'NotBeforeError', error.message, error.date)
       // Retornamos

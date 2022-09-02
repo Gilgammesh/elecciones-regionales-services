@@ -12,10 +12,10 @@ import { eventsLogs } from '../../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'ubigeo'
-const nombre_submodulo: string = 'departamento'
-const nombre_controlador: string = 'departamento.controller'
-const exclude_campos: string = '-createdAt -updatedAt'
+const nombre_modulo = 'ubigeo'
+const nombre_submodulo = 'departamento'
+const nombre_controlador = 'departamento.controller'
+const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
   pageSize: 10
@@ -33,34 +33,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Departamento.countDocuments()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los departamentos paginados
     const list = await Departamento.find({}, exclude_campos)
@@ -100,10 +93,7 @@ export const get: Handler = async (req, res) => {
 
   try {
     // Intentamos realizar la búsqueda por id
-    const departamento: IDepartamento | null = await Departamento.findById(
-      id,
-      exclude_campos
-    )
+    const departamento: IDepartamento | null = await Departamento.findById(id, exclude_campos)
 
     // Retornamos los datos del departamento encontrado
     return res.json({
@@ -180,20 +170,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó el departamento correctamente',
       departamento: departamentoResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Ubigeo', 'Crear nuevo departamento', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el departamento'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo crear el departamento'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -224,12 +215,11 @@ export const update: Handler = async (req, res) => {
     body.ubigeo = `${body.codigo}0000`
 
     // Intentamos realizar la búsqueda por id y actualizamos
-    const departamentoOut: IDepartamento | null =
-      await Departamento.findByIdAndUpdate(id, body, {
-        new: true,
-        runValidators: true,
-        context: 'query'
-      })
+    const departamentoOut: IDepartamento | null = await Departamento.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+      context: 'query'
+    })
 
     // Guardamos el log del evento
     await saveLog({
@@ -253,10 +243,7 @@ export const update: Handler = async (req, res) => {
     })
 
     // Obtenemos el departamento actualizado
-    const departamentoResp: IDepartamento | null = await Departamento.findById(
-      id,
-      exclude_campos
-    )
+    const departamentoResp: IDepartamento | null = await Departamento.findById(id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -270,20 +257,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó el departamento correctamente',
       departamento: departamentoResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Ubigeo', 'Actualizando departamento', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar el departamento'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo actualizar el departamento'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -308,14 +296,10 @@ export const remove: Handler = async (req, res) => {
 
   try {
     // Obtenemos el departamento antes que se elimine
-    const departamentoResp: IDepartamento | null = await Departamento.findById(
-      id,
-      exclude_campos
-    )
+    const departamentoResp: IDepartamento | null = await Departamento.findById(id, exclude_campos)
 
     // Intentamos realizar la búsqueda por id y removemos
-    const departamentoIn: IDepartamento | null =
-      await Departamento.findByIdAndRemove(id)
+    const departamentoIn: IDepartamento | null = await Departamento.findByIdAndRemove(id)
 
     // Guardamos el log del evento
     await saveLog({

@@ -42,34 +42,27 @@ export const getAll: Handler = async (req, res) => {
     }
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los logs paginados
     let logs: Array<ILog>
@@ -171,8 +164,8 @@ export const getAll: Handler = async (req, res) => {
 // Obtener datos de un log //
 /*******************************************************************************************************/
 export const get: Handler = async (req, res) => {
-  // Leemos los parámetros y el query de la petición
-  const { params, query } = req
+  // Leemos los parámetros de la petición
+  const { params } = req
   // Obtenemos el Id del log
   const { id } = params
 

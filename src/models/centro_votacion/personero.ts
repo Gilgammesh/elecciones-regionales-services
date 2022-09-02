@@ -85,8 +85,7 @@ const PersoneroSchema: Schema = new Schema(
       type: String,
       enum: {
         values: ['mesa', 'local', 'distrito', 'provincia'],
-        message:
-          '{VALUE}, no es un tipo válido. Elija entre: mesa | local | distrito | provincia'
+        message: '{VALUE}, no es un tipo válido. Elija entre: mesa | local | distrito | provincia'
       }
     },
     asignadoA: String,

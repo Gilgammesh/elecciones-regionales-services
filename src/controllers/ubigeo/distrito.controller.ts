@@ -14,10 +14,10 @@ import { eventsLogs } from '../../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'ubigeo'
-const nombre_submodulo: string = 'distrito'
-const nombre_controlador: string = 'distrito.controller'
-const exclude_campos: string = '-createdAt -updatedAt'
+const nombre_modulo = 'ubigeo'
+const nombre_submodulo = 'distrito'
+const nombre_controlador = 'distrito.controller'
+const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
   pageSize: 10
@@ -46,34 +46,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Distrito.find(queryDistrito).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los distritos de una provincia y departamento paginados
     const list = await Distrito.find(queryDistrito, exclude_campos)
@@ -114,18 +107,14 @@ export const getAll_: Handler = async (req, res) => {
     let queryDistrito = {}
 
     // Obtenemos los datos del departamento si existe
-    const departamento: IDepartamento | null = await Departamento.findById(
-      query.departamento
-    )
+    const departamento: IDepartamento | null = await Departamento.findById(query.departamento)
     // Si existe un departamento
     if (departamento) {
       queryDistrito = { ...queryDistrito, departamento: departamento.codigo }
     }
 
     // Obtenemos los datos de la provincia si existe si existe
-    const provincia: IProvincia | null = await Provincia.findById(
-      query.provincia
-    )
+    const provincia: IProvincia | null = await Provincia.findById(query.provincia)
     // Si existe una provincia
     if (provincia) {
       queryDistrito = { ...queryDistrito, provincia: provincia.codigo }
@@ -135,34 +124,27 @@ export const getAll_: Handler = async (req, res) => {
     const totalRegistros: number = await Distrito.find(queryDistrito).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los distritos de una provincia y departamento paginados
     const list = await Distrito.find(queryDistrito, exclude_campos)
@@ -202,10 +184,7 @@ export const get: Handler = async (req, res) => {
 
   try {
     // Intentamos realizar la búsqueda por id
-    const distrito: IDistrito | null = await Distrito.findById(
-      id,
-      exclude_campos
-    )
+    const distrito: IDistrito | null = await Distrito.findById(id, exclude_campos)
 
     // Retornamos los datos del distrito encontrado
     return res.json({
@@ -265,10 +244,7 @@ export const create: Handler = async (req, res) => {
     })
 
     // Obtenemos el distrito creado
-    const distritoResp: IDistrito | null = await Distrito.findById(
-      distritoOut._id,
-      exclude_campos
-    )
+    const distritoResp: IDistrito | null = await Distrito.findById(distritoOut._id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -282,20 +258,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó el distrito correctamente',
       distrito: distritoResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Ubigeo', 'Crear nuevo distrito', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el distrito'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo crear el distrito'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -326,15 +303,11 @@ export const update: Handler = async (req, res) => {
     body.ubigeo = `${body.departamento}${body.provincia}${body.codigo}`
 
     // Intentamos realizar la búsqueda por id y actualizamos
-    const distritoOut: IDistrito | null = await Distrito.findByIdAndUpdate(
-      id,
-      body,
-      {
-        new: true,
-        runValidators: true,
-        context: 'query'
-      }
-    )
+    const distritoOut: IDistrito | null = await Distrito.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+      context: 'query'
+    })
 
     // Guardamos el log del evento
     await saveLog({
@@ -358,10 +331,7 @@ export const update: Handler = async (req, res) => {
     })
 
     // Obtenemos el distrito actualizado
-    const distritoResp: IDistrito | null = await Distrito.findById(
-      id,
-      exclude_campos
-    )
+    const distritoResp: IDistrito | null = await Distrito.findById(id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -375,20 +345,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó el distrito correctamente',
       distrito: distritoResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Ubigeo', 'Actualizando distrito', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar el distrito'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo actualizar el distrito'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -413,10 +384,7 @@ export const remove: Handler = async (req, res) => {
 
   try {
     // Obtenemos el distrito antes que se elimine
-    const distritoResp: IDistrito | null = await Distrito.findById(
-      id,
-      exclude_campos
-    )
+    const distritoResp: IDistrito | null = await Distrito.findById(id, exclude_campos)
 
     // Intentamos realizar la búsqueda por id y removemos
     const distritoIn: IDistrito | null = await Distrito.findByIdAndRemove(id)

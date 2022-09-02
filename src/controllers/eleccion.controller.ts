@@ -12,9 +12,9 @@ import { eventsLogs } from '../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'elecciones'
-const nombre_submodulo: string = ''
-const nombre_controlador: string = 'eleccion.controller'
+const nombre_modulo = 'elecciones'
+const nombre_submodulo = ''
+const nombre_controlador = 'eleccion.controller'
 const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -25,42 +25,35 @@ const pagination = {
 // Obtener todas las elecciones //
 /*******************************************************************************************************/
 export const getAll: Handler = async (req, res) => {
-  // Leemos el eleccion y el query de la petición
-  const { usuario, query } = req
+  // Leemos el query de la petición
+  const { query } = req
 
   try {
     // Intentamos obtener el total de registros de elecciones
     const totalRegistros: number = await Eleccion.find({}).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todas las elecciones paginadas
     const list: Array<IEleccion> = await Eleccion.find({}, exclude_campos)
@@ -98,10 +91,7 @@ export const get: Handler = async (req, res) => {
   const { id } = params
   try {
     // Intentamos realizar la búsqueda por id
-    const eleccion: IEleccion | null = await Eleccion.findById(
-      id,
-      exclude_campos
-    )
+    const eleccion: IEleccion | null = await Eleccion.findById(id, exclude_campos)
 
     // Retornamos los datos de la eleccion encontrada
     return res.json({
@@ -123,8 +113,8 @@ export const get: Handler = async (req, res) => {
 // Crear una nueva eleccion //
 /*******************************************************************************************************/
 export const create: Handler = async (req, res) => {
-  // Leemos las cabeceras, el eleccion, el cuerpo y los archivos de la petición
-  const { headers, usuario, query, body, files } = req
+  // Leemos las cabeceras, el usuario y el cuerpo de la petición
+  const { headers, usuario, body } = req
 
   // Obtenemos la Fuente, Origen, Ip, Dispositivo y Navegador del eleccion
   const { source, origin, ip, device, browser } = headers
@@ -174,10 +164,7 @@ export const create: Handler = async (req, res) => {
     })
 
     // Obtenemos la eleccion creada
-    const eleccionResp: IEleccion | null = await Eleccion.findById(
-      eleccionOut._id,
-      exclude_campos
-    )
+    const eleccionResp: IEleccion | null = await Eleccion.findById(eleccionOut._id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -191,20 +178,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó la eleccion correctamente',
       eleccion: eleccionResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Eleccions', 'Crear nueva eleccion', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear la eleccion'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo crear la eleccion'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -219,8 +207,8 @@ export const create: Handler = async (req, res) => {
 // Actualizar los datos de una eleccion //
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
-  // Leemos las cabeceras, el eleccion, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, query, body, files } = req
+  // Leemos las cabeceras, el usuario, los parámetros y el cuerpo de la petición
+  const { headers, usuario, params, body } = req
   // Obtenemos el Id de la eleccion
   const { id } = params
 
@@ -276,10 +264,7 @@ export const update: Handler = async (req, res) => {
     })
 
     // Obtenemos la eleccion actualizada
-    const eleccionResp: IEleccion | null = await Eleccion.findById(
-      id,
-      exclude_campos
-    )
+    const eleccionResp: IEleccion | null = await Eleccion.findById(id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -293,20 +278,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó la eleccion correctamente',
       eleccion: eleccionResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Eleccions', 'Actualizando eleccion', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos de la eleccion'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo actualizar los datos de la eleccion'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -321,8 +307,8 @@ export const update: Handler = async (req, res) => {
 // Eliminar una eleccion //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
-  // Leemos las cabeceras, el eleccion, los parámetros y el query de la petición
-  const { headers, usuario, params, query } = req
+  // Leemos las cabeceras, el usuario y los parámetros de la petición
+  const { headers, usuario, params } = req
   // Obtenemos el Id de la eleccion
   const { id } = params
 
@@ -331,10 +317,7 @@ export const remove: Handler = async (req, res) => {
 
   try {
     // Obtenemos la eleccion antes que se elimine
-    const eleccionResp: IEleccion | null = await Eleccion.findById(
-      id,
-      exclude_campos
-    )
+    const eleccionResp: IEleccion | null = await Eleccion.findById(id, exclude_campos)
 
     const elecciones = await Eleccion.find({ actual: true })
     // Si existe un año como actual y es igual al que se quiere actualizar

@@ -3,27 +3,19 @@
 /*******************************************************************************************************/
 import mongoose, { ConnectOptions } from 'mongoose'
 import 'colors'
-import {
-  appEnvironment,
-  dbDriver,
-  dbHost,
-  dbName,
-  dbUser,
-  dbPwd,
-  dbPort
-} from '../configs'
+import { appEnvironment, dbDriver, dbHost, dbName, dbUser, dbPwd, dbPort } from '../configs'
 
 /*******************************************************************************************************/
 // Creamos la conexión a la Base de Datos MongoDB //
 /*******************************************************************************************************/
 export const connection = async () => {
   // Propiedades en la cadena de conexión
-  let properties: string = 'retryWrites=true&w=majority'
+  let properties = 'retryWrites=true&w=majority'
   if (dbUser !== '' && dbPwd !== '') {
     properties = 'authSource=admin&retryWrites=true&w=majority'
   }
   // URI de acceso a la Base de Datos
-  const URI: string = `${dbDriver}://${dbHost}:${dbPort}/${dbName}?${properties}`
+  const URI = `${dbDriver}://${dbHost}:${dbPort}/${dbName}?${properties}`
 
   // Definimos las opciones de conexión a la base de datos
   const mongooseOptions: ConnectOptions = {

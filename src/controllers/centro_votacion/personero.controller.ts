@@ -20,9 +20,9 @@ import { eventsLogs } from '../../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'centros-votacion'
-const nombre_submodulo: string = 'personeros'
-const nombre_controlador: string = 'personero.controller'
+const nombre_modulo = 'centros-votacion'
+const nombre_submodulo = 'personeros'
+const nombre_controlador = 'personero.controller'
 const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -113,27 +113,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Personero.find(queryPersoneros).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los personeros paginados
     const list: Array<IPersonero> = await Personero.find(queryPersoneros, exclude_campos)
@@ -275,18 +275,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó el personero correctamente',
       personero: personeroResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Centros de Votación', 'Crear nuevo personero', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el personero'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo crear el personero'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -388,18 +391,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó el personero correctamente',
       personero: personeroResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Centros de Votación', 'Actualizando personero', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos del personero'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo actualizar los datos del personero'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -414,8 +420,8 @@ export const update: Handler = async (req, res) => {
 // Eliminar un personero //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario, los parámetros y el query de la petición
-  const { headers, usuario, params, query } = req
+  // Leemos las cabeceras, el usuario y los parámetros de la petición
+  const { headers, usuario, params } = req
   // Obtenemos el Id del personero
   const { id } = params
 
@@ -520,13 +526,13 @@ export const importExcel: Handler = async (req, res) => {
       const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
 
       // Inicializamos el array de mensajes de error
-      let msgError: IMsgError[] = []
+      const msgError: IMsgError[] = []
 
       // Establecemos la fila de inicio
-      const rowStart: number = 1
+      const rowStart = 1
 
       // Establecemos el id de grupo de log
-      let id_grupo: string = `${usuario._id}@${parseNewDate24H_()}`
+      const id_grupo = `${usuario._id}@${parseNewDate24H_()}`
 
       // Recorremos las filas para ver si hay errores
       const promises1 = rows.map(async (row, index) => {

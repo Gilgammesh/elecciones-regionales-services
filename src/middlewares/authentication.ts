@@ -2,12 +2,14 @@
 // Requerimos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken'
-import Rol, {
-  IRol,
-  IPermisosModulo,
-  IPermisosSubmodulo
-} from '../models/admin/rol'
+import {
+  verify,
+  JwtPayload,
+  NotBeforeError,
+  TokenExpiredError,
+  JsonWebTokenError
+} from 'jsonwebtoken'
+import Rol, { IRol, IPermisosModulo, IPermisosSubmodulo } from '../models/admin/rol'
 import Modulo, { IModulo } from '../models/admin/modulo'
 import Usuario, { IUsuario } from '../models/usuario'
 import Eleccion, { IEleccion } from '../models/eleccion'
@@ -63,9 +65,7 @@ export const validarToken: Handler = async (req, res, next) => {
     // Si existe una decodificación
     if (decoded?.usuario?._id) {
       // Obtenemos los datos del usuario actualizados
-      const usuario: IUsuario | null = await Usuario.findById(
-        decoded.usuario._id
-      )
+      const usuario: IUsuario | null = await Usuario.findById(decoded.usuario._id)
         .populate('rol')
         .populate('departamento')
 
@@ -113,22 +113,18 @@ export const validarToken: Handler = async (req, res, next) => {
         })
       }
     }
-  } catch (error: VerifyErrors | any) {
+  } catch (error: unknown) {
     // Capturamos los tipos de error en la vericación
-    if (error.name === 'JsonWebTokenError') {
+    if (error instanceof JsonWebTokenError && error.name === 'JsonWebTokenError') {
       // Mostramos el error en consola
-      console.log(
-        'Autenticando token Middleware',
-        'JsonWebTokenError',
-        error.message
-      )
+      console.log('Autenticando token Middleware', 'JsonWebTokenError', error.message)
       // Retornamos
       return res.status(401).json({
         status: false,
         msg: 'El token proporcionado es inválido'
       })
     }
-    if (error.name === 'TokenExpiredError') {
+    if (error instanceof TokenExpiredError && error.name === 'TokenExpiredError') {
       // Mostramos el error en consola
       console.log(
         'Autenticando token Middleware',
@@ -144,14 +140,9 @@ export const validarToken: Handler = async (req, res, next) => {
         msg
       })
     }
-    if (error.name === 'NotBeforeError') {
+    if (error instanceof NotBeforeError && error.name === 'NotBeforeError') {
       // Mostramos el error en consola
-      console.log(
-        'Autenticando token Middleware',
-        'NotBeforeError',
-        error.message,
-        error.date
-      )
+      console.log('Autenticando token Middleware', 'NotBeforeError', error.message, error.date)
       // Retornamos
       return res.status(401).json({
         status: false,
@@ -220,9 +211,7 @@ export const validarRol: Handler = async (req, res, next) => {
           if (size >= 2) {
             // Hacemos un recorrido por los submódulos del módulo y buscamos una coincidencia con el submódulo requerido
             const promisesSubmodulo = permisoModulo[0].permisos
-              .filter(
-                (eleSM: IPermisosSubmodulo) => eleSM.submodulo === submodulo
-              )
+              .filter((eleSM: IPermisosSubmodulo) => eleSM.submodulo === submodulo)
               .map((eleSM: IPermisosSubmodulo) => eleSM)
             const permisoSubmodulo = await Promise.all(promisesSubmodulo)
 

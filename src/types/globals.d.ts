@@ -1,3 +1,3 @@
 import { Server as WebsocketServer } from 'socket.io'
 
-declare var socketIO: WebsocketServer
+declare const socketIO: WebsocketServer

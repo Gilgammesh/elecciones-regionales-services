@@ -3,7 +3,13 @@
 /*******************************************************************************************************/
 import { Server as HttpServer } from 'http'
 import { Socket, Server as WebsocketServer } from 'socket.io'
-import { verify, VerifyErrors, JwtPayload } from 'jsonwebtoken'
+import {
+  verify,
+  JwtPayload,
+  NotBeforeError,
+  TokenExpiredError,
+  JsonWebTokenError
+} from 'jsonwebtoken'
 import moment from 'moment-timezone'
 import { appSecret, corsOptions, timeZone } from './configs'
 
@@ -34,15 +40,19 @@ const sockets = (httpServer: HttpServer) => {
         verify(token, appSecret)
         // Pasamos a la siguiente función
         next()
-      } catch (error: VerifyErrors | any) {
+      } catch (error: unknown) {
         // Si existe un error
-        if (error.name === 'JsonWebTokenError') {
+        if (error instanceof JsonWebTokenError && error.name === 'JsonWebTokenError') {
           // Mostramos el error en consola
           console.log('Autenticando token Socket Middleware', 'JsonWebTokenError', error.message)
           // Generamos el error
           next(new Error(`El token proporcionado es inválido`))
         }
-        if (error.name === 'TokenExpiredError' && error.expiredAt) {
+        if (
+          error instanceof TokenExpiredError &&
+          error.name === 'TokenExpiredError' &&
+          error.expiredAt
+        ) {
           // Mostramos el error en consola
           console.log(
             'Autenticando token Socket Middleware',
@@ -60,7 +70,7 @@ const sockets = (httpServer: HttpServer) => {
           // Generamos el error
           next(new Error(`El token proporcionado ha expirado el ${fecha} a las ${hora}`))
         }
-        if (error.name === 'NotBeforeError') {
+        if (error instanceof NotBeforeError && error.name === 'NotBeforeError') {
           // Mostramos el error en consola
           console.log(
             'Autenticando token Socket Middleware',

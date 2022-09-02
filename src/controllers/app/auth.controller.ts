@@ -2,7 +2,13 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken'
+import {
+  verify,
+  JwtPayload,
+  NotBeforeError,
+  TokenExpiredError,
+  JsonWebTokenError
+} from 'jsonwebtoken'
 import { compare } from 'bcryptjs'
 import Personero, { IPersonero } from '../../models/centro_votacion/personero'
 import Eleccion, { IEleccion } from '../../models/eleccion'
@@ -86,9 +92,9 @@ export const check: Handler = async (req, res) => {
         })
       }
     }
-  } catch (error: VerifyErrors | any) {
+  } catch (error: unknown) {
     // Capturamos los tipos de error en la vericación
-    if (error.name === 'JsonWebTokenError') {
+    if (error instanceof JsonWebTokenError && error.name === 'JsonWebTokenError') {
       // Mostramos el error en consola
       console.log('App Chequeando token', 'JsonWebTokenError', error.message)
       // Retornamos
@@ -97,7 +103,7 @@ export const check: Handler = async (req, res) => {
         msg: 'El token proporcionado es inválido'
       })
     }
-    if (error.name === 'TokenExpiredError') {
+    if (error instanceof TokenExpiredError && error.name === 'TokenExpiredError') {
       // Mostramos el error en consola
       console.log('App Chequeando token', 'TokenExpiredError', error.message, error.expiredAt)
       // Obtenemos la fecha de expiración casteada del token
@@ -108,7 +114,7 @@ export const check: Handler = async (req, res) => {
         msg
       })
     }
-    if (error.name === 'NotBeforeError') {
+    if (error instanceof NotBeforeError && error.name === 'NotBeforeError') {
       // Mostramos el error en consola
       console.log('App Chequeando token', 'NotBeforeError', error.message, error.date)
       // Retornamos

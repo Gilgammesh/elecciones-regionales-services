@@ -12,9 +12,9 @@ import { eventsLogs } from '../../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'auth'
-const nombre_submodulo: string = 'password'
-const nombre_controlador: string = 'password.controller'
+const nombre_modulo = 'auth'
+const nombre_submodulo = 'password'
+const nombre_controlador = 'password.controller'
 
 /*******************************************************************************************************/
 // Actualizar la contraseña de un usuario desde la intranet //
@@ -33,10 +33,7 @@ export const update: Handler = async (req, res) => {
     // Si existe un usuario
     if (usuarioIn) {
       // Comparamos la contraseña actual del usuario con la proporcionada en el formulario
-      const pwdIsValid: boolean = await compare(
-        body.password,
-        usuarioIn.password
-      )
+      const pwdIsValid: boolean = await compare(body.password, usuarioIn.password)
       // Si la contraseña no es válida
       if (pwdIsValid === false) {
         return res.status(401).json({
@@ -101,12 +98,7 @@ export const update: Handler = async (req, res) => {
     }
   } catch (error) {
     // Mostramos el error en consola
-    console.log(
-      'Auth',
-      'Actualizando contraseña de usuario',
-      usuario._id,
-      error
-    )
+    console.log('Auth', 'Actualizando contraseña de usuario', usuario._id, error)
     // Retornamos
     return res.status(404).json({
       status: false,

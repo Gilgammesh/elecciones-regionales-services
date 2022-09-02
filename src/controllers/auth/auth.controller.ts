@@ -2,7 +2,13 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import { verify, JwtPayload, VerifyErrors } from 'jsonwebtoken'
+import {
+  verify,
+  JwtPayload,
+  NotBeforeError,
+  TokenExpiredError,
+  JsonWebTokenError
+} from 'jsonwebtoken'
 import { compare } from 'bcryptjs'
 import Usuario, { IUsuario } from '../../models/usuario'
 import Sesion, { ISesion } from '../../models/admin/sesion'
@@ -40,9 +46,7 @@ export const check: Handler = async (req, res) => {
     // Si existe una decodificación
     if (decoded?.usuario?._id) {
       // Obtenemos los datos del usuario actualizados
-      const usuario: IUsuario | null = await Usuario.findById(
-        decoded.usuario._id
-      )
+      const usuario: IUsuario | null = await Usuario.findById(decoded.usuario._id)
         .populate('rol')
         .populate('departamento')
 
@@ -90,10 +94,7 @@ export const check: Handler = async (req, res) => {
           }
 
           // Sacamos la lista de todos los módulos
-          const modulos: Array<IModulo> = await Modulo.find(
-            {},
-            '-createdAt -updatedAt'
-          ).sort({
+          const modulos: Array<IModulo> = await Modulo.find({}, '-createdAt -updatedAt').sort({
             orden: 'asc'
           })
 
@@ -119,9 +120,9 @@ export const check: Handler = async (req, res) => {
         })
       }
     }
-  } catch (error: VerifyErrors | any) {
+  } catch (error: unknown) {
     // Capturamos los tipos de error en la vericación
-    if (error.name === 'JsonWebTokenError') {
+    if (error instanceof JsonWebTokenError && error.name === 'JsonWebTokenError') {
       // Mostramos el error en consola
       console.log('Chequeando token', 'JsonWebTokenError', error.message)
       // Retornamos
@@ -130,14 +131,9 @@ export const check: Handler = async (req, res) => {
         msg: 'El token proporcionado es inválido'
       })
     }
-    if (error.name === 'TokenExpiredError') {
+    if (error instanceof TokenExpiredError && error.name === 'TokenExpiredError') {
       // Mostramos el error en consola
-      console.log(
-        'Chequeando token',
-        'TokenExpiredError',
-        error.message,
-        error.expiredAt
-      )
+      console.log('Chequeando token', 'TokenExpiredError', error.message, error.expiredAt)
       // Obtenemos la fecha de expiración casteada del token
       const msg: string = parseJwtDateExpire(error.expiredAt)
       // Retornamos
@@ -146,14 +142,9 @@ export const check: Handler = async (req, res) => {
         msg
       })
     }
-    if (error.name === 'NotBeforeError') {
+    if (error instanceof NotBeforeError && error.name === 'NotBeforeError') {
       // Mostramos el error en consola
-      console.log(
-        'Chequeando token',
-        'NotBeforeError',
-        error.message,
-        error.date
-      )
+      console.log('Chequeando token', 'NotBeforeError', error.message, error.date)
       // Retornamos
       return res.status(401).json({
         status: false,
@@ -273,10 +264,9 @@ export const login: Handler = async (req, res) => {
     const token: string | null = await generateTokenWithTime(payload, tokenTime)
 
     // Sacamos la lista de todos los módulos
-    const modulos: Array<IModulo> = await Modulo.find(
-      {},
-      '-createdAt -updatedAt'
-    ).sort({ orden: 'asc' })
+    const modulos: Array<IModulo> = await Modulo.find({}, '-createdAt -updatedAt').sort({
+      orden: 'asc'
+    })
 
     // Retornamos el token, datos y permisos del usuario
     return res.json({
@@ -377,31 +367,6 @@ export const token: Handler = async (req, res) => {
         status: false,
         msg: 'La contraseña no es válida'
       })
-    }
-
-    // Obtenemos los datos de las elecciones actuales
-    const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true })
-
-    // Definimos los datos del usuario enviados en la respuesta
-    const usuarioResponse: IUsuarioResponse = {
-      _id: usuario._id,
-      nombres: usuario.nombres,
-      apellidos: usuario.apellidos,
-      dni: usuario.dni,
-      genero: usuario.genero,
-      img: usuario.img,
-      rol: {
-        _id: usuario.rol._id,
-        super: usuario.rol.super
-      },
-      ...(!usuario.rol.super && {
-        departamento: {
-          _id: usuario.departamento._id,
-          codigo: usuario.departamento.codigo,
-          nombre: usuario.departamento.nombre
-        }
-      }),
-      ...(eleccion && { anho: eleccion.anho })
     }
 
     // Definimos el objeto payload

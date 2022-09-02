@@ -16,11 +16,7 @@ const router: Router = Router()
 /*******************************************************************************************************/
 
 // Personeros
-router.post(
-  '/personeros/import-excel',
-  [validarToken, validarRol],
-  personero.importExcel
-)
+router.post('/personeros/import-excel', [validarToken, validarRol], personero.importExcel)
 router.get('/personeros', [validarToken, validarRol], personero.getAll)
 router.post('/personeros', [validarToken, validarRol], personero.create)
 router.get('/personeros/:id', [validarToken, validarRol], personero.get)

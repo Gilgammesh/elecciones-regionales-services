@@ -9,7 +9,6 @@ import Rol, { IRol } from '../models/admin/rol'
 import encrypt from '../helpers/encrypt'
 import { getUrlFile, storeFile, removeFile } from '../helpers/upload'
 import { saveLog } from './admin/log.controller'
-import _ from 'lodash'
 import { parseNewDate24H_ } from '../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../helpers/pagination'
 import { eventsLogs } from '../models/admin/log'
@@ -17,9 +16,9 @@ import { eventsLogs } from '../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'usuarios'
-const nombre_submodulo: string = ''
-const nombre_controlador: string = 'usuario.controller'
+const nombre_modulo = 'usuarios'
+const nombre_submodulo = ''
+const nombre_controlador = 'usuario.controller'
 const exclude_campos = '-password -createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -64,27 +63,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Usuario.find(queryUsuario).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los usuarios paginados
     const list: Array<IUsuario> = await Usuario.find(queryUsuario, exclude_campos)
@@ -192,7 +191,7 @@ export const create: Handler = async (req, res) => {
       const newUsuario: IUsuario = new Usuario(body)
 
       // Path o ruta del archivo
-      let path: string = 'usuarios'
+      const path = 'usuarios'
 
       // Si existe un archivo de imagen obtenemos la url pública
       if (files && Object.keys(files).length > 0 && files.file) {
@@ -252,18 +251,21 @@ export const create: Handler = async (req, res) => {
         msg: 'El rol ingresado no existe'
       })
     }
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Usuarios', 'Crear nuevo usuario', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el usuario'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo crear el usuario'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -310,7 +312,7 @@ export const update: Handler = async (req, res) => {
     }
 
     // Path o ruta del archivo
-    let path: string = 'usuarios'
+    const path = 'usuarios'
 
     // Declaramos el objeto de variables que no se guardaran o se removerán
     let bodyUnset = {}
@@ -390,18 +392,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó el usuario correctamente',
       usuario: usuarioResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Usuarios', 'Actualizando usuario', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos del usuario'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo actualizar los datos del usuario'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -416,8 +421,8 @@ export const update: Handler = async (req, res) => {
 // Eliminar un usuario //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario, los parámetros y el query de la petición
-  const { headers, usuario, params, query } = req
+  // Leemos las cabeceras, el usuario y los parámetros de la petición
+  const { headers, usuario, params } = req
   // Obtenemos el Id del usuario
   const { id } = params
 
@@ -455,7 +460,7 @@ export const remove: Handler = async (req, res) => {
     })
 
     // Path o ruta del archivo
-    let path: string = 'usuarios'
+    const path = 'usuarios'
 
     // Si existe la imagen del usuario
     if (usuarioIn?.img && usuarioIn?.img !== '') {

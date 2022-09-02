@@ -2,10 +2,8 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import mongoose from 'mongoose'
 import Organizacion from '../../models/organizacion_politica/organizacion'
 import Gobernador, { IGobernador } from '../../models/organizacion_politica/gobernador'
-import _ from 'lodash'
 
 /*******************************************************************************************************/
 // Obtener todos los gobernadores de las organizaciones políticas //

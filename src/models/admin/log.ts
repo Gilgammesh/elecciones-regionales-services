@@ -99,8 +99,7 @@ const LogSchema: Schema = new Schema(
       type: String,
       enum: {
         values: ['crear', 'actualizar', 'remover'],
-        message:
-          '{VALUE}, no es un evento válido. Elija entre: crear | actualizar | remover'
+        message: '{VALUE}, no es un evento válido. Elija entre: crear | actualizar | remover'
       },
       required: [true, 'El evento es requerido']
     },
@@ -110,8 +109,7 @@ const LogSchema: Schema = new Schema(
       type: String,
       enum: {
         values: ['unico', 'masivo'],
-        message:
-          '{VALUE}, no es un procesamiento válido. Elija entre: unico | masivo'
+        message: '{VALUE}, no es un procesamiento válido. Elija entre: unico | masivo'
       },
       required: [true, 'El procesamiento es requerido']
     },

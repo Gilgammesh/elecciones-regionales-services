@@ -52,8 +52,7 @@ const SesionSchema: Schema = new Schema(
       type: String,
       enum: {
         values: ['online', 'busy', 'offline'],
-        message:
-          '{VALUE}, no es un estado válido. Elija entre: online | busy | offline'
+        message: '{VALUE}, no es un estado válido. Elija entre: online | busy | offline'
       },
       default: 'online',
       required: [true, 'El estado es requerido']

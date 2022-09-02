@@ -6,7 +6,6 @@ import { Error } from 'mongoose'
 import { join } from 'path'
 import { UploadedFile } from 'express-fileupload'
 import Consejero, { IConsejero } from '../../models/organizacion_politica/consejero'
-import _ from 'lodash'
 import { saveLog } from '../admin/log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
@@ -17,9 +16,9 @@ import { getUrlFile, removeFile, storeFile } from '../../helpers/upload'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'organizaciones_politicas'
-const nombre_submodulo: string = 'consejero'
-const nombre_controlador: string = 'consejero.controller'
+const nombre_modulo = 'organizaciones_politicas'
+const nombre_submodulo = 'consejero'
+const nombre_controlador = 'consejero.controller'
 const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -72,27 +71,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Consejero.find(queryConsejeroes).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los consejeros paginados
     const list: Array<IConsejero> = await Consejero.find(queryConsejeroes, exclude_campos)
@@ -196,9 +195,9 @@ export const create: Handler = async (req, res) => {
     })
 
     // Path o ruta del archivo
-    const path: string = join('organizaciones-politicas', 'consejeros')
-    const pathUrl: string = 'organizaciones-politicas/consejeros'
-    const pathDefault: string = `${getPathUpload()}/${pathUrl}/no-foto.png`
+    const path = join('organizaciones-politicas', 'consejeros')
+    const pathUrl = 'organizaciones-politicas/consejeros'
+    const pathDefault = `${getPathUpload()}/${pathUrl}/no-foto.png`
 
     // Si existe un archivo de imagen obtenemos la url pública
     if (files && Object.keys(files).length > 0 && files.file) {
@@ -248,18 +247,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó el consejero correctamente',
       consejero: consejeroResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Organizaciones Políticas', 'Crear nuevo consejero', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el consejero'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo crear el consejero'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -292,9 +294,9 @@ export const update: Handler = async (req, res) => {
     }
 
     // Path o ruta del archivo
-    const path: string = join('organizaciones-politicas', 'consejeros')
-    const pathUrl: string = 'organizaciones-politicas/consejeros'
-    const pathDefault: string = `${getPathUpload()}/${pathUrl}/no-foto.png`
+    const path = join('organizaciones-politicas', 'consejeros')
+    const pathUrl = 'organizaciones-politicas/consejeros'
+    const pathDefault = `${getPathUpload()}/${pathUrl}/no-foto.png`
 
     // Si existe un archivo de imagen obtenemos la url pública
     if (files && Object.keys(files).length > 0 && files.file) {
@@ -349,18 +351,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó el consejero correctamente',
       consejero: consejeroResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Organizaciones Políticas', 'Actualizando consejero', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos del consejero'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo actualizar los datos del consejero'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -412,9 +417,9 @@ export const remove: Handler = async (req, res) => {
     })
 
     // Path o ruta del archivo
-    const path: string = join('organizaciones-politicas', 'consejeros')
-    const pathUrl: string = 'organizaciones-politicas/consejeros'
-    const pathDefault: string = `${getPathUpload()}/${pathUrl}/no-foto.png`
+    const path = join('organizaciones-politicas', 'consejeros')
+    const pathUrl = 'organizaciones-politicas/consejeros'
+    const pathDefault = `${getPathUpload()}/${pathUrl}/no-foto.png`
 
     // Si existe una foto
     if (consejeroIn && consejeroIn.foto && consejeroIn.foto !== pathDefault) {

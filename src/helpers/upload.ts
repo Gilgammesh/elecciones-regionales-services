@@ -15,7 +15,7 @@ export const getUrlFile = (file: UploadedFile, path: string, name: string) => {
   const exten: string = arrFileName[arrFileName.length - 1]
 
   // Definimos la Url pública del archivo
-  const urlFile: string = `${getPathUpload()}/${path}/${name}.${exten}`
+  const urlFile = `${getPathUpload()}/${path}/${name}.${exten}`
   // Retornamos
   return urlFile
 }
@@ -23,22 +23,13 @@ export const getUrlFile = (file: UploadedFile, path: string, name: string) => {
 /*******************************************************************************************************/
 // Función para almacenar el archivo en la carpeta uploads //
 /*******************************************************************************************************/
-export const storeFile = async (
-  file: UploadedFile,
-  path: string,
-  name: string
-) => {
+export const storeFile = async (file: UploadedFile, path: string, name: string) => {
   // Obtenemos la extensión del archivo
   const arrFileName: string[] = file.name.split('.')
   const exten: string = arrFileName[arrFileName.length - 1]
 
   // Definimos la ruta del archivo
-  const pathFile: string = join(
-    __dirname,
-    '../../uploads',
-    path,
-    `${name}.${exten}`
-  )
+  const pathFile: string = join(__dirname, '../../uploads', path, `${name}.${exten}`)
 
   try {
     // Intentamos mover el archivo a la ruta y guardarlo

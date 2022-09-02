@@ -23,7 +23,7 @@ import { eventsLogs } from '../../models/admin/log'
 import { getHost } from '../../helpers/host'
 
 /*******************************************************************************************************/
-// Tipos del Componente //
+// Enums e Interfaces del Componente //
 /*******************************************************************************************************/
 export const TiposPersonero = {
   MESA: 'mesa',
@@ -34,13 +34,25 @@ const ActionsPersonero = {
   CHANGE: 'change',
   REMOVE: 'remove'
 }
+interface IRegex {
+  $regex: string
+  $options: string
+}
+
+interface IQueryPersoneros {
+  departamento: string
+  nombres: IRegex
+  apellidos: IRegex
+  dni: IRegex
+  asignado: boolean
+}
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'centros-votacion'
-const nombre_submodulo: string = 'mesas'
-const nombre_controlador: string = 'mesa.controller'
+const nombre_modulo = 'centros-votacion'
+const nombre_submodulo = 'mesas'
+const nombre_controlador = 'mesa.controller'
 const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -61,7 +73,7 @@ export const getAll: Handler = async (req, res) => {
     // Añadimos el año
     queryMesas = { ...queryMesas, anho: usuario.anho }
     // Obtenemos el código del departamente según el caso
-    let codDpto: string = usuario.rol.super
+    const codDpto: string = usuario.rol.super
       ? (query.departamento as string)
       : (usuario.departamento?.codigo as string)
     // Filtramos por el query de departamento
@@ -123,27 +135,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Mesa.find(queryMesas).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los centros de votación paginados
     const list: Array<IMesa> = await Mesa.find(queryMesas, exclude_campos)
@@ -341,18 +353,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó la mesa de votación correctamente',
       mesa: mesaResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Centros de Votación', 'Crear nueva mesa de votación', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear la mesa de votación'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo crear la mesa de votación'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -666,18 +681,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó la mesa de votación correctamente',
       mesa: mesaResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Centros de Votación', 'Actualizando mesa de votación', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos de la mesa de votación'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${error.errors[array[0]].properties.message}`
+    let msg = 'No se pudo actualizar los datos de la mesa de votación'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -692,8 +710,8 @@ export const update: Handler = async (req, res) => {
 // Eliminar una mesa de votación //
 /*******************************************************************************************************/
 export const remove: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario, los parámetros y el query de la petición
-  const { headers, usuario, params, query } = req
+  // Leemos las cabeceras, el usuario y los parámetros de la petición
+  const { headers, usuario, params } = req
   // Obtenemos el Id de la mesa de votación
   const { id } = params
 
@@ -786,9 +804,9 @@ export const getPersoneros: Handler = async (req, res) => {
 
   try {
     // Definimos el query de los personeros
-    const arrayQueryPersoneros: Array<any> = []
+    const arrayQueryPersoneros: Array<IQueryPersoneros | { _id: string }> = []
     arrayQueryPersoneros.push({
-      departamento: query.departamento,
+      departamento: query.departamento as string,
       nombres: {
         $regex: `.*${(query.nombres as string).split(/\s/).join('.*')}.*`,
         $options: 'i'
@@ -804,10 +822,10 @@ export const getPersoneros: Handler = async (req, res) => {
       asignado: false
     })
     if (query.personero_mesa) {
-      arrayQueryPersoneros.push({ _id: query.personero_mesa })
+      arrayQueryPersoneros.push({ _id: query.personero_mesa as string })
     }
     if (query.personero_local) {
-      arrayQueryPersoneros.push({ _id: query.personero_local })
+      arrayQueryPersoneros.push({ _id: query.personero_local as string })
     }
     const queryPersoneros = { $or: arrayQueryPersoneros }
 
@@ -815,27 +833,27 @@ export const getPersoneros: Handler = async (req, res) => {
     const totalRegistros: number = await Personero.find(queryPersoneros).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(pagination.pageSize, query.pageSize)
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(pagination.page, query.page, totalPaginas)
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los personeros paginados
     const list: Array<IPersonero> = await Personero.find(queryPersoneros, exclude_campos)
@@ -952,7 +970,7 @@ export const createTemplate: Handler = async (req, res) => {
 
     if (body.tipo === 'new') {
       // Establecemos los estilos de las celdas
-      for (let i: number = 2; i < 3000; i++) {
+      for (let i = 2; i < 3000; i++) {
         ws1.cell(i, 1).style(styleCell)
         ws1.cell(i, 2).style(styleCell)
         ws1.cell(i, 3).style(styleCell)
@@ -1154,13 +1172,13 @@ export const importExcel: Handler = async (req, res) => {
       const rows: Row[] = await xlsxFile(pathFile, { sheet: 1 })
 
       // Inicializamos el array de mensajes de error
-      let msgError: IMsgError[] = []
+      const msgError: IMsgError[] = []
 
       // Establecemos la fila de inicio
-      const rowStart: number = 1
+      const rowStart = 1
 
       // Establecemos el id de grupo de log
-      let id_grupo: string = `${usuario._id}@${parseNewDate24H_()}`
+      const id_grupo = `${usuario._id}@${parseNewDate24H_()}`
 
       // Recorremos las filas para ver si hay errores
       const promises = rows.map(async (row, index) => {
@@ -1280,7 +1298,7 @@ export const importExcel: Handler = async (req, res) => {
               })
 
               // Intentamos realizar la búsqueda por id y actualizamos
-              let mesaOut: IMesa | null = await Mesa.findOneAndUpdate(
+              const mesaOut: IMesa | null = await Mesa.findOneAndUpdate(
                 { mesa: `${row[0]}`, anho: usuario.anho },
                 {
                   $set: {

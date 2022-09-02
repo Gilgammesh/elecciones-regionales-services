@@ -2,19 +2,19 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import { Error } from 'mongoose'
 import Rol, { IRol } from '../../models/admin/rol'
 import { saveLog } from './log.controller'
 import { parseNewDate24H_ } from '../../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
 import { eventsLogs } from '../../models/admin/log'
+import { Error } from 'mongoose'
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'admin'
-const nombre_submodulo: string = 'rol'
-const nombre_controlador: string = 'rol.controller'
+const nombre_modulo = 'admin'
+const nombre_submodulo = 'rol'
+const nombre_controlador = 'rol.controller'
 const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
@@ -39,34 +39,27 @@ export const getAll: Handler = async (req, res) => {
     }
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los roles paginados
     let list: Array<IRol>
@@ -201,20 +194,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó el rol correctamente',
       rol: rolResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Admin', 'Crear nuevo rol', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear el rol'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo crear el rol'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -284,20 +278,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó el rol correctamente',
       rol: rolResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Admin', 'Actualizando rol', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar los datos del rol'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo actualizar los datos del rol'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos

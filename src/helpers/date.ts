@@ -1,10 +1,11 @@
 /*******************************************************************************************************/
 // Importamos las dependencias //
 /*******************************************************************************************************/
-const moment = require('moment-timezone')
 import { Moment } from 'moment-timezone'
 import { timeZone } from '../configs'
 import { capitalizar } from './text'
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const moment = require('moment-timezone')
 
 /*******************************************************************************************************/
 // Función para obtener la Fecha Actual parseada ("dd/mm/yyyy") como un string //
@@ -19,11 +20,11 @@ export const parseNewDate = () => {
   const year: number = date.getFullYear()
 
   // Casteamos a string con dos dígitos
-  let day_: string = day < 10 ? `0${day}` : `${day}`
-  let month_: string = month < 10 ? `0${month}` : `${month}`
+  const day_: string = day < 10 ? `0${day}` : `${day}`
+  const month_: string = month < 10 ? `0${month}` : `${month}`
 
   // Definimos la variable
-  const dateString: string = `${day_}/${month_}/${year}`
+  const dateString = `${day_}/${month_}/${year}`
 
   // Retornamos
   return dateString
@@ -45,14 +46,14 @@ export const parseNewDate24H = () => {
   const second: number = date.getSeconds()
 
   // Casteamos a string con dos dígitos
-  let day_: string = day < 10 ? `0${day}` : `${day}`
-  let month_: string = month < 10 ? `0${month}` : `${month}`
-  let hour_: string = hour < 10 ? `0${hour}` : `${hour}`
-  let minute_: string = minute < 10 ? `0${minute}` : `${minute}`
-  let second_: string = second < 10 ? `0${second}` : `${second}`
+  const day_: string = day < 10 ? `0${day}` : `${day}`
+  const month_: string = month < 10 ? `0${month}` : `${month}`
+  const hour_: string = hour < 10 ? `0${hour}` : `${hour}`
+  const minute_: string = minute < 10 ? `0${minute}` : `${minute}`
+  const second_: string = second < 10 ? `0${second}` : `${second}`
 
   // Definimos la variable
-  const dateString: string = `${day_}/${month_}/${year} ${hour_}:${minute_}:${second_}`
+  const dateString = `${day_}/${month_}/${year} ${hour_}:${minute_}:${second_}`
 
   // Retornamos
   return dateString
@@ -75,12 +76,12 @@ export const parseNewDate24H_ = () => {
   const milisecond: number = date.getMilliseconds()
 
   // Casteamos a string con dos dígitos
-  let day_: string = day < 10 ? `0${day}` : `${day}`
-  let month_: string = month < 10 ? `0${month}` : `${month}`
-  let hour_: string = hour < 10 ? `0${hour}` : `${hour}`
-  let minute_: string = minute < 10 ? `0${minute}` : `${minute}`
-  let second_: string = second < 10 ? `0${second}` : `${second}`
-  let milisecond_: string = ''
+  const day_: string = day < 10 ? `0${day}` : `${day}`
+  const month_: string = month < 10 ? `0${month}` : `${month}`
+  const hour_: string = hour < 10 ? `0${hour}` : `${hour}`
+  const minute_: string = minute < 10 ? `0${minute}` : `${minute}`
+  const second_: string = second < 10 ? `0${second}` : `${second}`
+  let milisecond_ = ''
   if (milisecond < 10) {
     milisecond_ = `00${milisecond}`
   }
@@ -92,7 +93,7 @@ export const parseNewDate24H_ = () => {
   }
 
   // Definimos la variable
-  const dateString: string = `${year}-${month_}-${day_}T${hour_}:${minute_}:${second_}.${milisecond_}Z`
+  const dateString = `${year}-${month_}-${day_}T${hour_}:${minute_}:${second_}.${milisecond_}Z`
 
   // Retornamos
   return dateString
@@ -112,7 +113,7 @@ export const parseNewDate12H = () => {
   const hour: number = date.getHours()
   const minute: number = date.getMinutes()
   const second: number = date.getSeconds()
-  let ampm: string = ''
+  let ampm = ''
   if (hour < 12) {
     ampm = 'am'
   }
@@ -123,15 +124,15 @@ export const parseNewDate12H = () => {
     ampm = 'pm'
   }
   // Casteamos a string con dos dígitos
-  let day_: string = day < 10 ? `0${day}` : `${day}`
-  let month_: string = month < 10 ? `0${month}` : `${month}`
-  let hour_: number = hour === 0 || hour === 12 ? 12 : hour % 12
-  let hour__: string = hour_ < 10 ? `0${hour_}` : `${hour_}`
-  let minute_: string = minute < 10 ? `0${minute}` : `${minute}`
-  let second_: string = second < 10 ? `0${second}` : `${second}`
+  const day_: string = day < 10 ? `0${day}` : `${day}`
+  const month_: string = month < 10 ? `0${month}` : `${month}`
+  const hour_: number = hour === 0 || hour === 12 ? 12 : hour % 12
+  const hour__: string = hour_ < 10 ? `0${hour_}` : `${hour_}`
+  const minute_: string = minute < 10 ? `0${minute}` : `${minute}`
+  const second_: string = second < 10 ? `0${second}` : `${second}`
 
   // Definimos la variable
-  const dateString: string = `${day_}/${month_}/${year} ${hour__}:${minute_}:${second_} ${ampm}`
+  const dateString = `${day_}/${month_}/${year} ${hour__}:${minute_}:${second_} ${ampm}`
 
   // Retornamos
   return dateString
@@ -146,9 +147,9 @@ export const parseJwtDateExpire = (date: Date) => {
   const dayNro: string = fecha.format('DD')
   const monthName: string = fecha.format('MMMM')
   const year: string = fecha.format('YYYY')
-  const fecha_: string = `${dayNro} de ${monthName} de ${year}`
+  const fecha_ = `${dayNro} de ${monthName} de ${year}`
   const hora: string = fecha.format('hh:mm:ss a')
-  const fechaExpire: string = `El token proporcionado ha expirado el ${fecha_} a las ${hora}`
+  const fechaExpire = `El token proporcionado ha expirado el ${fecha_} a las ${hora}`
   // Retornamos
   return fechaExpire
 }
@@ -162,7 +163,7 @@ export const parseMomentDate = (date: Date) => {
   const day: string = fecha.format('DD')
   const month: string = fecha.format('MM')
   const year: string = fecha.format('YYYY')
-  const fechaString: string = `${day}/${month}/${year}}`
+  const fechaString = `${day}/${month}/${year}}`
   // Retornamos
   return fechaString
 }
@@ -177,7 +178,7 @@ export const parseMomentDate24H = (date: Date) => {
   const month: string = fecha.format('MM')
   const year: string = fecha.format('YYYY')
   const hora: string = fecha.format('HH:mm:ss')
-  const fechaString: string = `${day}/${month}/${year} ${hora}`
+  const fechaString = `${day}/${month}/${year} ${hora}`
   // Retornamos
   return fechaString
 }
@@ -192,7 +193,7 @@ export const parseMomentDate12H = (date: Date) => {
   const month: string = fecha.format('MM')
   const year: string = fecha.format('YYYY')
   const hora: string = fecha.format('hh:mm:ss a')
-  const fechaString: string = `${day}/${month}/${year} ${hora}`
+  const fechaString = `${day}/${month}/${year} ${hora}`
   // Retornamos
   return fechaString
 }
@@ -208,7 +209,7 @@ export const parseMomentDate12HDay = (date: Date) => {
   const month: string = fecha.format('MM')
   const year: string = fecha.format('YYYY')
   const hora: string = fecha.format('hh:mm:ss a')
-  const fechaString: string = `${dayName} ${day}/${month}/${year} ${hora}`
+  const fechaString = `${dayName} ${day}/${month}/${year} ${hora}`
   // Retornamos
   return fechaString
 }

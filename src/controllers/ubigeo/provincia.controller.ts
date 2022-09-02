@@ -13,10 +13,10 @@ import { eventsLogs } from '../../models/admin/log'
 /*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
-const nombre_modulo: string = 'ubigeo'
-const nombre_submodulo: string = 'provincia'
-const nombre_controlador: string = 'provincia.controller'
-const exclude_campos: string = '-createdAt -updatedAt'
+const nombre_modulo = 'ubigeo'
+const nombre_submodulo = 'provincia'
+const nombre_controlador = 'provincia.controller'
+const exclude_campos = '-createdAt -updatedAt'
 const pagination = {
   page: 1,
   pageSize: 10
@@ -41,34 +41,27 @@ export const getAll: Handler = async (req, res) => {
     const totalRegistros: number = await Provincia.find(queryProvincia).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todas las provincias de un departamento paginadas
     const list = await Provincia.find(queryProvincia, exclude_campos)
@@ -109,9 +102,7 @@ export const getAll_: Handler = async (req, res) => {
     let queryProvincia = {}
 
     // Obtenemos los datos del departamento si existe
-    const departamento: IDepartamento | null = await Departamento.findById(
-      query.departamento
-    )
+    const departamento: IDepartamento | null = await Departamento.findById(query.departamento)
     // Si existe un departamento
     if (departamento) {
       queryProvincia = { ...queryProvincia, departamento: departamento.codigo }
@@ -121,34 +112,27 @@ export const getAll_: Handler = async (req, res) => {
     const totalRegistros: number = await Provincia.find(queryProvincia).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
-    const validatePageSize: any = await getPageSize(
-      pagination.pageSize,
-      query.pageSize
-    )
+    const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
     if (!validatePageSize.status) {
       return res.status(404).json({
         status: validatePageSize.status,
         msg: validatePageSize.msg
       })
     }
-    const pageSize = validatePageSize.size
+    const pageSize = validatePageSize.size as number
 
     // Obtenemos el número total de páginas
     const totalPaginas: number = getTotalPages(totalRegistros, pageSize)
 
     // Obtenemos el número de página y hacemos las validaciones
-    const validatePage: any = await getPage(
-      pagination.page,
-      query.page,
-      totalPaginas
-    )
+    const validatePage = await getPage(pagination.page, query.page as string, totalPaginas)
     if (!validatePage.status) {
       return res.status(404).json({
         status: validatePage.status,
         msg: validatePage.msg
       })
     }
-    const page = validatePage.page
+    const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todas las provincias de un departamento paginadas
     const list = await Provincia.find(queryProvincia, exclude_campos)
@@ -188,10 +172,7 @@ export const get: Handler = async (req, res) => {
 
   try {
     // Intentamos realizar la búsqueda por id
-    const provincia: IProvincia | null = await Provincia.findById(
-      id,
-      exclude_campos
-    )
+    const provincia: IProvincia | null = await Provincia.findById(id, exclude_campos)
 
     // Retornamos los datos de la provincia encontrada
     return res.json({
@@ -268,20 +249,21 @@ export const create: Handler = async (req, res) => {
       msg: 'Se creó la provincia correctamente',
       provincia: provinciaResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Ubigeo', 'Crear nueva provincia', error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo crear la provincia'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo crear la provincia'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -312,15 +294,11 @@ export const update: Handler = async (req, res) => {
     body.ubigeo = `${body.departamento}${body.codigo}00`
 
     // Intentamos realizar la búsqueda por id y actualizamos
-    const provinciaOut: IProvincia | null = await Provincia.findByIdAndUpdate(
-      id,
-      body,
-      {
-        new: true,
-        runValidators: true,
-        context: 'query'
-      }
-    )
+    const provinciaOut: IProvincia | null = await Provincia.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+      context: 'query'
+    })
 
     // Guardamos el log del evento
     await saveLog({
@@ -344,10 +322,7 @@ export const update: Handler = async (req, res) => {
     })
 
     // Obtenemos la provincia actualizada
-    const provinciaResp: IProvincia | null = await Provincia.findById(
-      id,
-      exclude_campos
-    )
+    const provinciaResp: IProvincia | null = await Provincia.findById(id, exclude_campos)
 
     // Si existe un socket
     if (globalThis.socketIO) {
@@ -361,20 +336,21 @@ export const update: Handler = async (req, res) => {
       msg: 'Se actualizó la provincia correctamente',
       provincia: provinciaResp
     })
-  } catch (error: Error | any) {
+  } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Ubigeo', 'Actualizando provincia', id, error)
 
     // Inicializamos el mensaje de error
-    let msg: string = 'No se pudo actualizar la provincia'
-    // Si existe un error con validación de campo único
-    if (error?.errors) {
-      // Obtenemos el array de errores
-      const array: string[] = Object.keys(error.errors)
-      // Construimos el mensaje de error de acuerdo al campo
-      msg = `${error.errors[array[0]].path}: ${
-        error.errors[array[0]].properties.message
-      }`
+    let msg = 'No se pudo actualizar la provincia'
+    if (error instanceof Error.ValidationError) {
+      // Si existe un error con validación de campo único
+      if (error.errors) {
+        Object.entries(error.errors).forEach((item, index) => {
+          if (item instanceof Error.ValidatorError && index === 0) {
+            msg = `${item.path}: ${item.properties.message}`
+          }
+        })
+      }
     }
 
     // Retornamos
@@ -399,10 +375,7 @@ export const remove: Handler = async (req, res) => {
 
   try {
     // Obtenemos la provincia antes que se elimine
-    const provinciaResp: IProvincia | null = await Provincia.findById(
-      id,
-      exclude_campos
-    )
+    const provinciaResp: IProvincia | null = await Provincia.findById(id, exclude_campos)
 
     // Intentamos realizar la búsqueda por id y removemos
     const provinciaIn: IProvincia | null = await Provincia.findByIdAndRemove(id)

@@ -9,7 +9,7 @@ import { genSalt, hash } from 'bcryptjs'
 const encrypt = async (text: string) => {
   try {
     // Número de veces que aplicamos el algoritmo de hash
-    const n: number = 10
+    const n = 10
     // Generamos el Salt con el número de veces de aplicación del algoritmo
     const salt: string = await genSalt(n)
     // Convertimos la cadena de texto a un código de texto encriptado

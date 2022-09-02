@@ -27,10 +27,7 @@ export const generateToken = async (object: JwtPayload) => {
 /*******************************************************************************************************/
 // Función para generar un jsonwebtoken definido (que expira en un tiempo determinado) //
 /*******************************************************************************************************/
-export const generateTokenWithTime = async (
-  object: JwtPayload,
-  time: string
-) => {
+export const generateTokenWithTime = async (object: JwtPayload, time: string) => {
   try {
     // Intentamos crear el jwtoken firmado con el payload, el texto secreto y el tiempo de expiración
     const token: string = sign(

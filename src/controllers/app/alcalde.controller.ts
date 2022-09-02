@@ -5,7 +5,6 @@ import { Handler } from 'express'
 import mongoose from 'mongoose'
 import Organizacion from '../../models/organizacion_politica/organizacion'
 import Alcalde, { IAlcalde } from '../../models/organizacion_politica/alcalde'
-import _ from 'lodash'
 
 /*******************************************************************************************************/
 // Obtener todos los alcaldes de las organizaciones políticas //

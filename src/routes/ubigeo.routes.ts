@@ -2,7 +2,7 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Router } from 'express'
-import { validarToken, validarRol } from '../middlewares/authentication'
+import { validarToken } from '../middlewares/authentication'
 import * as departamento from '../controllers/ubigeo/departamento.controller'
 import * as provincia from '../controllers/ubigeo/provincia.controller'
 import * as distrito from '../controllers/ubigeo/distrito.controller'
