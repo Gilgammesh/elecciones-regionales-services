@@ -166,10 +166,10 @@ export const create: Handler = async (req, res) => {
     // Obtenemos la eleccion creada
     const eleccionResp: IEleccion | null = await Eleccion.findById(eleccionOut._id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => eleccion creada en el módulo elecciones, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('eleccion-creada')
+      // Emitimos el evento => eleccion creada en el módulo elecciones
+      globalThis.socketIO.to('intranet').emit('eleccion-creada')
     }
 
     // Retornamos la eleccion creada
@@ -266,10 +266,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos la eleccion actualizada
     const eleccionResp: IEleccion | null = await Eleccion.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => eleccion actualizada en el módulo elecciones, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('eleccion-actualizada')
+      // Emitimos el evento => eleccion actualizada en el módulo elecciones
+      globalThis.socketIO.to('intranet').emit('eleccion-actualizada')
     }
 
     // Retornamos la eleccion actualizada
@@ -353,10 +353,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => eleccion eliminada en el módulo elecciones, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('eleccion-eliminada')
+      // Emitimos el evento => eleccion eliminada en el módulo elecciones
+      globalThis.socketIO.to('intranet').emit('eleccion-eliminada')
     }
 
     // Retornamos la eleccion eliminada

@@ -163,10 +163,10 @@ export const update: Handler = async (req, res) => {
       { new: true, runValidators: true, context: 'query' }
     )
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => sesión actualizada en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-sesion-actualizada')
+      // Emitimos el evento => sesión actualizada en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-sesion-actualizada')
     }
 
     // Obtenemos los datos de la sesión de respuesta

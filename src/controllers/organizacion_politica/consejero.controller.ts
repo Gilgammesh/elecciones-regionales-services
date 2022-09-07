@@ -241,6 +241,12 @@ export const create: Handler = async (req, res) => {
       exclude_campos
     )
 
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => consejero creado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-consejero-creado')
+    }
+
     // Retornamos el consejero creado
     return res.json({
       status: true,
@@ -345,6 +351,12 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el consejero actualizado
     const consejeroResp: IConsejero | null = await Consejero.findById(id, exclude_campos)
 
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => consejero actualizado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-consejero-actualizado')
+    }
+
     // Retornamos el consejero actualizado
     return res.json({
       status: true,
@@ -424,6 +436,12 @@ export const remove: Handler = async (req, res) => {
     // Si existe una foto
     if (consejeroIn && consejeroIn.foto && consejeroIn.foto !== pathDefault) {
       removeFile(consejeroIn.foto, path)
+    }
+
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => consejero eliminado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-consejero-eliminado')
     }
 
     // Retornamos el consejero eliminado

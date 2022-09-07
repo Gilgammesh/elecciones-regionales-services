@@ -246,10 +246,10 @@ export const create: Handler = async (req, res) => {
     // Obtenemos el distrito creado
     const distritoResp: IDistrito | null = await Distrito.findById(distritoOut._id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => distrito creado en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-distrito-creado')
+      // Emitimos el evento => distrito creado en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-distrito-creado')
     }
 
     // Retornamos el distrito creado
@@ -333,10 +333,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el distrito actualizado
     const distritoResp: IDistrito | null = await Distrito.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => distrito actualizado en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-distrito-actualizado')
+      // Emitimos el evento => distrito actualizado en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-distrito-actualizado')
     }
 
     // Retornamos el distrito actualizado
@@ -410,10 +410,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => distrito eliminado en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-distrito-eliminado')
+      // Emitimos el evento => distrito eliminado en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-distrito-eliminado')
     }
 
     // Retornamos el distrito eliminado

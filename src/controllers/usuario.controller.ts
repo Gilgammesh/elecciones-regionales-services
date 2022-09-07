@@ -232,10 +232,10 @@ export const create: Handler = async (req, res) => {
         .populate('rol', exclude_campos)
         .populate('departamento', exclude_campos)
 
-      // Si existe un socket
+      // Si existe un servidor socketIO
       if (globalThis.socketIO) {
-        // Emitimos el evento => usuario creado en el módulo usuarios, a todos los usuarios conectados //
-        globalThis.socketIO.broadcast.emit('usuario-creado')
+        // Emitimos el evento => usuario creado en el módulo usuarios
+        globalThis.socketIO.to('intranet').emit('usuario-creado')
       }
 
       // Retornamos el usuario creado
@@ -380,10 +380,10 @@ export const update: Handler = async (req, res) => {
       .populate('rol', exclude_campos)
       .populate('departamento', exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => usuario actualizado en el módulo usuarios, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('usuario-actualizado')
+      // Emitimos el evento => usuario actualizado en el módulo usuarios
+      globalThis.socketIO.to('intranet').emit('usuario-actualizado')
     }
 
     // Retornamos el usuario actualizado
@@ -467,10 +467,10 @@ export const remove: Handler = async (req, res) => {
       removeFile(usuarioIn.img, path)
     }
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => usuario eliminado en el módulo usuarios, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('usuario-eliminado')
+      // Emitimos el evento => usuario eliminado en el módulo usuarios
+      globalThis.socketIO.to('intranet').emit('usuario-eliminado')
     }
 
     // Retornamos el usuario eliminado

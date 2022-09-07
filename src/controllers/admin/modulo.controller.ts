@@ -151,10 +151,10 @@ export const create: Handler = async (req, res) => {
     // Obtenemos el módulo creado
     const moduloResp: IModulo | null = await Modulo.findById(moduloOut._id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => módulo creado en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-modulo-creado')
+      // Emitimos el evento => módulo creado en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-modulo-creado')
     }
 
     // Retornamos el módulo creado
@@ -245,10 +245,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el módulo actualizado
     const moduloResp: IModulo | null = await Modulo.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => módulo actualizado en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-modulo-actualizado')
+      // Emitimos el evento => módulo actualizado en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-modulo-actualizado')
     }
 
     // Retornamos el módulo actualizado
@@ -323,10 +323,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => módulo eliminado en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-modulo-eliminado')
+      // Emitimos el evento => módulo eliminado en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-modulo-eliminado')
     }
 
     // Retornamos el módulo eliminado

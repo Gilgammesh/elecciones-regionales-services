@@ -341,10 +341,10 @@ export const create: Handler = async (req, res) => {
     // Obtenemos la mesa de votación creada
     const mesaResp: IMesa | null = await Mesa.findById(mesaOut._id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => mesa de votación creada en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centros-votacion-mesa-creada')
+      // Emitimos el evento => mesa creada en el módulo centros de votación
+      globalThis.socketIO.to('intranet').emit('centros-votacion-mesa-creada')
     }
 
     // Retornamos la mesa de votación creada
@@ -669,10 +669,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos la mesa de votación actualizada
     const mesaResp: IMesa | null = await Mesa.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => mesa de votación actualizada en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centros-votacion-mesa-actualizada')
+      // Emitimos el evento => mesa actualizada en el módulo centros de votación
+      globalThis.socketIO.to('intranet').emit('centros-votacion-mesa-actualizada')
     }
 
     // Retornamos la mesa de votación actualizada
@@ -772,10 +772,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => mesa de votación eliminada en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centros-votacion-mesa-eliminada')
+      // Emitimos el evento => mesa eliminada en el módulo centros de votación
+      globalThis.socketIO.to('intranet').emit('centros-votacion-mesa-eliminada')
     }
 
     // Retornamos la mesa de votación eliminada
@@ -1451,10 +1451,10 @@ export const importExcel: Handler = async (req, res) => {
       })
       await Promise.all(promises)
 
-      // Si existe un socket
+      // Si existe un servidor socketIO
       if (globalThis.socketIO) {
-        // Emitimos el evento => mesas de votación importados en el módulo centros de votación, a todos los usuarios conectados //
-        globalThis.socketIO.broadcast.emit('centros-votacion-mesas-importadas')
+        // Emitimos el evento => mesas importadas en el módulo centros de votación
+        globalThis.socketIO.to('intranet').emit('centros-votacion-mesas-importadas')
       }
 
       // Si hubo errores retornamos el detalle de los mensajes de error

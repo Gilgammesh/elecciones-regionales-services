@@ -237,10 +237,10 @@ export const create: Handler = async (req, res) => {
       exclude_campos
     )
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => provincia creada en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-provincia-creada')
+      // Emitimos el evento => provincia creada en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-provincia-creada')
     }
 
     // Retornamos la provincia creada
@@ -324,10 +324,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos la provincia actualizada
     const provinciaResp: IProvincia | null = await Provincia.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => provincia actualizada en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-provincia-actualizada')
+      // Emitimos el evento => provincia actualizada en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-provincia-actualizada')
     }
 
     // Retornamos la provincia actualizada
@@ -401,10 +401,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => provincia eliminada en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-provincia-eliminada')
+      // Emitimos el evento => provincia eliminada en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-provincia-eliminada')
     }
 
     // Retornamos la provincia eliminada

@@ -158,10 +158,10 @@ export const create: Handler = async (req, res) => {
       exclude_campos
     )
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => departamento creado en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-departamento-creado')
+      // Emitimos el evento => departamento creado en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-departamento-creado')
     }
 
     // Retornamos el departamento creado
@@ -245,10 +245,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el departamento actualizado
     const departamentoResp: IDepartamento | null = await Departamento.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => departamento actualizado en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-departamento-actualizado')
+      // Emitimos el evento => departamento actualizado en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-departamento-actualizado')
     }
 
     // Retornamos el departamento actualizado
@@ -322,10 +322,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => departamento eliminado en el módulo ubigeo, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('ubigeo-departamento-eliminado')
+      // Emitimos el evento => departamento eliminado en el módulo ubigeo
+      globalThis.socketIO.to('intranet').emit('ubigeo-departamento-eliminado')
     }
 
     // Retornamos el departamento eliminado

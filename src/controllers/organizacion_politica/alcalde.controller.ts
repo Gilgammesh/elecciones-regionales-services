@@ -242,6 +242,12 @@ export const create: Handler = async (req, res) => {
     // Obtenemos el alcalde creado
     const alcaldeResp: IAlcalde | null = await Alcalde.findById(alcaldeOut._id, exclude_campos)
 
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => alcalde creado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-alcalde-creado')
+    }
+
     // Retornamos el alcalde creado
     return res.json({
       status: true,
@@ -341,6 +347,12 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el alcalde actualizado
     const alcaldeResp: IAlcalde | null = await Alcalde.findById(id, exclude_campos)
 
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => alcalde actualizado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-alcalde-actualizado')
+    }
+
     // Retornamos el alcalde actualizado
     return res.json({
       status: true,
@@ -420,6 +432,12 @@ export const remove: Handler = async (req, res) => {
     // Si existe una foto
     if (alcaldeIn && alcaldeIn.foto && alcaldeIn.foto !== pathDefault) {
       removeFile(alcaldeIn.foto, path)
+    }
+
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => alcalde eliminado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-alcalde-eliminado')
     }
 
     // Retornamos el alcalde eliminado
