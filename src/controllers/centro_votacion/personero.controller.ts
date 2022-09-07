@@ -263,10 +263,10 @@ export const create: Handler = async (req, res) => {
       exclude_campos
     ).populate('departamento', exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => personero creado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centros-votacion-personero-creado')
+      // Emitimos el evento => personero creado en el módulo centros de votación
+      globalThis.socketIO.to('intranet').emit('centros-votacion-personero-creado')
     }
 
     // Retornamos el personero creado
@@ -379,10 +379,10 @@ export const update: Handler = async (req, res) => {
       exclude_campos
     )
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => personero actualizado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centros-votacion-personero-actualizado')
+      // Emitimos el evento => personero actualizado en el módulo centros de votación
+      globalThis.socketIO.to('intranet').emit('centros-votacion-personero-actualizado')
     }
 
     // Retornamos el personero actualizado
@@ -464,10 +464,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => personero eliminado en el módulo centros de votación, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('centros-votacion-personero-eliminado')
+      // Emitimos el evento => personero eliminado en el módulo centros de votación
+      globalThis.socketIO.to('intranet').emit('centros-votacion-personero-eliminado')
     }
 
     // Retornamos el personero eliminado
@@ -604,10 +604,10 @@ export const importExcel: Handler = async (req, res) => {
         })
         await Promise.all(promises2)
 
-        // Si existe un socket
+        // Si existe un servidor socketIO
         if (globalThis.socketIO) {
-          // Emitimos el evento => personeros importados en el módulo centro de votación, a todos los usuarios conectados //
-          globalThis.socketIO.broadcast.emit('centros-votacion-personeros-importados')
+          // Emitimos el evento => personeros-importados en el módulo centros de votación
+          globalThis.socketIO.to('intranet').emit('centros-votacion-personeros-importados')
         }
 
         // Retornamos el detalle de los mensajes de error si existen

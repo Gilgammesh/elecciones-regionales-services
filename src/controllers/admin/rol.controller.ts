@@ -182,10 +182,10 @@ export const create: Handler = async (req, res) => {
     // Obtenemos el rol creado
     const rolResp: IRol | null = await Rol.findById(rolOut._id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => rol creado en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-rol-creado')
+      // Emitimos el evento => rol creado en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-rol-creado')
     }
 
     // Retornamos el rol creado
@@ -266,10 +266,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el rol actualizado
     const rolResp: IRol | null = await Rol.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => rol actualizado en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-rol-actualizado')
+      // Emitimos el evento => rol actualizado en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-rol-actualizado')
     }
 
     // Retornamos el rol actualizado
@@ -342,11 +342,11 @@ export const remove: Handler = async (req, res) => {
       registros: 1,
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
-
-    // Si existe un socket
+    
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => rol eliminado en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-rol-eliminado')
+      // Emitimos el evento => rol eliminado en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-rol-eliminado')
     }
 
     // Retornamos el rol eliminado

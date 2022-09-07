@@ -218,6 +218,12 @@ export const create: Handler = async (req, res) => {
       exclude_campos
     )
 
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => gobernador creado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-gobernador-creado')
+    }
+
     // Retornamos el gobernador creado
     return res.json({
       status: true,
@@ -317,6 +323,12 @@ export const update: Handler = async (req, res) => {
     // Obtenemos el gobernador actualizado
     const gobernadorResp: IGobernador | null = await Gobernador.findById(id, exclude_campos)
 
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => gobernador actualizado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-gobernador-actualizado')
+    }
+
     // Retornamos el gobernador actualizado
     return res.json({
       status: true,
@@ -396,6 +408,12 @@ export const remove: Handler = async (req, res) => {
     // Si existe una foto
     if (gobernadorIn && gobernadorIn.foto && gobernadorIn.foto !== pathDefault) {
       removeFile(gobernadorIn.foto, path)
+    }
+
+    // Si existe un servidor socketIO
+    if (globalThis.socketIO) {
+      // Emitimos el evento => gobernador eliminado en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-gobernador-eliminado')
     }
 
     // Retornamos el gobernador eliminado

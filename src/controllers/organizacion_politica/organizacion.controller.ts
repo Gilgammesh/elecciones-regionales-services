@@ -205,10 +205,10 @@ export const create: Handler = async (req, res) => {
       exclude_campos
     )
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => organización política creada, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('organizacion-politica-creada')
+      // Emitimos el evento => organización creada en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-organizacion-creada')
     }
 
     // Retornamos la organización política creada
@@ -310,10 +310,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos la organización política actualizada
     const organizacionResp: IOrganizacion | null = await Organizacion.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => organización política actualizada, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('organizacion-politica-actualizada')
+      // Emitimos el evento => organización actualizada en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-organizacion-actualizada')
     }
 
     // Retornamos la organización política actualizada
@@ -401,10 +401,10 @@ export const remove: Handler = async (req, res) => {
       removeFile(organizacionIn.logo, path)
     }
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => organización política eliminada, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('organizacion-politica-eliminada')
+      // Emitimos el evento => organización eliminada en el módulo organizaciones políticas
+      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-organizacion-eliminada')
     }
 
     // Retornamos la organización política eliminada

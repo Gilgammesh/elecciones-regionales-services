@@ -153,8 +153,8 @@ export const create: Handler = async (req, res) => {
 
     // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => acción creada en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-accion-creada')
+      // Emitimos el evento => acción creada en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-accion-creada')
     }
 
     // Retornamos la acción creada
@@ -235,10 +235,10 @@ export const update: Handler = async (req, res) => {
     // Obtenemos la accion actualizada
     const accionResp: IAccion | null = await Accion.findById(id, exclude_campos)
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => acción actualizada en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-accion-actualizada')
+      // Emitimos el evento => acción actualizada en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-accion-actualizada')
     }
 
     // Retornamos la acción actualizada
@@ -312,10 +312,10 @@ export const remove: Handler = async (req, res) => {
       id_grupo: `${usuario._id}@${parseNewDate24H_()}`
     })
 
-    // Si existe un socket
+    // Si existe un servidor socketIO
     if (globalThis.socketIO) {
-      // Emitimos el evento => acción eliminada en el módulo administrador, a todos los usuarios conectados //
-      globalThis.socketIO.broadcast.emit('admin-accion-eliminada')
+      // Emitimos el evento => acción eliminada en el módulo administrador
+      globalThis.socketIO.to('intranet').emit('admin-accion-eliminada')
     }
 
     // Retornamos la acción eliminada
