@@ -13,14 +13,19 @@ dotenv.config()
 // Variables de la Aplicación //
 /*******************************************************************************************************/
 export const appEnvironment: string = process.env.APP_ENVIRONMENT || 'development'
-export const appHost: string = process.env.APP_ELEC_HOST || 'localhost'
-// export const appHost: string = process.env.APP_ELEC_HOST_ || 'localhost'
 export const appNombre: string = process.env.APP_ELEC_NAME || ''
 export const appDescripcion: string = process.env.APP_ELEC_DESCRIPTION || ''
-export const appPort: number = parseInt(process.env.APP_ELEC_PORT as string, 10) || 3000
-// export const appPort: number = parseInt(process.env.APP_ELEC_PORT_ as string, 10) || 3000
 export const appSecret: string = process.env.APP_ELEC_SECRET_TEXT || ''
 export const appAutorName: string = process.env.APP_ELEC_AUTHOR_NAME || ''
+
+export const appHost: string = process.env.APP_ELEC_HOST || 'localhost'
+// export const appHost: string = process.env.APP_ELEC_HOST_ || 'localhost'
+// export const appHost: string = process.env.APP_ELEC_HOST__ || 'localhost'
+
+export const appPort: number = parseInt(process.env.APP_ELEC_PORT as string, 10) || 3000
+// export const appPort: number = parseInt(process.env.APP_ELEC_PORT_ as string, 10) || 3000
+// export const appPort: number = parseInt(process.env.APP_ELEC_PORT__ as string, 10) || 3000
+
 /*******************************************************************************************************/
 // Variables de la Base de Datos MongoDB //
 /*******************************************************************************************************/
@@ -29,8 +34,10 @@ export const dbHost: string = process.env.APP_MONGO_DB_HOST || 'localhost'
 export const dbPort: number = parseInt(process.env.APP_MONGO_DB_PORT as string, 10) || 27017
 export const dbUser: string = process.env.APP_MONGO_DB_USER || ''
 export const dbPwd: string = process.env.APP_MONGO_DB_PWD || ''
+
 export const dbName: string = process.env.APP_MONGO_DB_NAME_ELEC || 'test'
 // export const dbName: string = process.env.APP_MONGO_DB_NAME_ELEC_ || 'test'
+// export const dbName: string = process.env.APP_MONGO_DB_NAME_ELEC__ || 'test'
 
 /*******************************************************************************************************/
 // Configuraciones Generales de la Aplicación //
