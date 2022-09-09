@@ -18,7 +18,6 @@ const router: Router = Router()
 // Autenticaciones
 router.post('/check', auth.check)
 router.post('/login', auth.login)
-router.post('/logout', validarToken, auth.logout)
 router.post('/token', auth.token)
 
 // Clave

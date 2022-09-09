@@ -9,6 +9,7 @@ import { IUsuario } from '../usuario'
 /*******************************************************************************************************/
 export interface ISesion extends Document {
   usuario: PopulatedDoc<IUsuario>
+  socketId: string
   fuente: string
   ip: string
   dispositivo: string
@@ -27,6 +28,10 @@ const SesionSchema: Schema = new Schema(
       ref: 'Usuario',
       type: Schema.Types.ObjectId,
       required: [true, 'El id del usuario es requerido']
+    },
+    socketId: {
+      type: String,
+      required: [true, 'El Id del socket es requerido']
     },
     fuente: {
       type: String,

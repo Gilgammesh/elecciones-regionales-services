@@ -77,7 +77,6 @@ export const getTotalPages = (total: number, size: number): number => {
 /*******************************************************************************************************/
 export const getPage = async (defaultValue: number, valuePage: string, total: number) => {
   if (valuePage) {
-    console.log('existe')
     try {
       // Intentamos convertir el string a número
       const page = Number(valuePage)
@@ -112,7 +111,6 @@ export const getPage = async (defaultValue: number, valuePage: string, total: nu
       }
     }
   } else {
-    console.log('no existe')
     return {
       status: true,
       page: defaultValue

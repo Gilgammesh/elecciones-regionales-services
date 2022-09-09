@@ -41,7 +41,6 @@ router.delete('/roles/:id', [validarToken, validarRol], rol.remove)
 
 // Sesiones
 router.get('/sesiones', [validarToken, validarRol], sesion.getAll)
-router.put('/sesiones', validarToken, sesion.update)
 
 // Logs
 router.get('/logs', [validarToken, validarRol], log.getAll)

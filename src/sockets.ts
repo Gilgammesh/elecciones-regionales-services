@@ -12,6 +12,7 @@ import {
 } from 'jsonwebtoken'
 import moment from 'moment-timezone'
 import { appSecret, corsOptions, timeZone } from './configs'
+import Sesion, { ISesion } from './models/admin/sesion'
 
 /*******************************************************************************************************/
 // Función para Crear e Inicializar el servidor Socket IO //
@@ -95,9 +96,9 @@ const sockets = (httpServer: HttpServer) => {
   //////////////////////////////////////////////////////////
   // Evento cuando se establece la conexión con el socket //
   //////////////////////////////////////////////////////////
-  io.on('connection', (socket: Socket) => {
+  io.on('connection', async (socket: Socket) => {
     // Obtenemos el token de autorización del websocket
-    const { token } = socket.handshake.auth
+    const { token, source, ip, device, browser } = socket.handshake.auth
     const decoded: JwtPayload = <JwtPayload>verify(token, appSecret)
 
     if (decoded && decoded.usuario) {
@@ -115,8 +116,44 @@ const sockets = (httpServer: HttpServer) => {
       // Suscribimos al socket al room intranet
       socket.join('intranet')
 
+      // Realizamos la búsqueda en sesión con el id del usuario
+      const sesion: ISesion | null = await Sesion.findOne({ usuario: decoded.usuario._id })
+      // Si existe una sesíon
+      if (sesion) {
+        // Realizamos la búsqueda por id y actualizamos
+        await Sesion.findOneAndUpdate(
+          { usuario: decoded.usuario._id },
+          {
+            $set: {
+              socketId: socket.id as string,
+              fuente: source as string,
+              ip: ip as string,
+              dispositivo: device as string,
+              navegador: browser as string,
+              estado: 'online'
+            }
+          }
+        )
+        // Emitimos los eventos
+        io.to(sesion.socketId).emit('admin-sesion-cerrada')
+        io.to('intranet').emit('admin-sesion-actualizada')
+      } else {
+        // Creamos el modelo de una nueva sesión y guardamos
+        const newSesion: ISesion = new Sesion({
+          usuario: decoded.usuario._id,
+          socketId: socket.id as string,
+          fuente: source as string,
+          ip: ip as string,
+          dispositivo: device as string,
+          navegador: browser as string
+        })
+        await newSesion.save()
+        // Emitimos los eventos
+        io.to('intranet').emit('admin-sesion-creada')
+      }
+
       // Mostramos la desconexión
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         console.log(
           'Cliente Web',
           socket.id,
@@ -127,6 +164,17 @@ const sockets = (httpServer: HttpServer) => {
           'desconectado',
           socket.disconnected
         )
+        // Realizamos la búsqueda por id y actualizamos
+        await Sesion.findOneAndUpdate(
+          { usuario: decoded.usuario._id },
+          {
+            $set: {
+              estado: 'offline'
+            }
+          }
+        )
+        // Emitimos los eventos
+        io.to('intranet').emit('admin-sesion-actualizada')
       })
     }
     if (decoded && decoded.personero) {

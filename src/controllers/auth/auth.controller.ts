@@ -11,7 +11,6 @@ import {
 } from 'jsonwebtoken'
 import { compare } from 'bcryptjs'
 import Usuario, { IUsuario } from '../../models/usuario'
-import Sesion, { ISesion } from '../../models/admin/sesion'
 import Modulo, { IModulo } from '../../models/admin/modulo'
 import Eleccion, { IEleccion } from '../../models/eleccion'
 import { generateToken, generateTokenWithTime } from '../../helpers/jwtoken'
@@ -23,13 +22,10 @@ import { IUsuarioResponse } from '../../middlewares/authentication'
 // Chequeamos el token del usuario //
 /*******************************************************************************************************/
 export const check: Handler = async (req, res) => {
-  // Leemos las cabeceras y el cuerpo de la petición
-  const { headers, body } = req
+  // Leemos el cuerpo de la petición
+  const { body } = req
   // Obtenemos la cabecera de autorización
   const { token } = body
-
-  // Obtenemos el Ip, Dispositivo y Navegador de origen
-  const { source, ip, device, browser } = headers
 
   // Si no existe el token
   if (!token || token === '') {
@@ -58,18 +54,6 @@ export const check: Handler = async (req, res) => {
           const eleccion: IEleccion | null = await Eleccion.findOne({
             actual: true
           })
-
-          // Actualizamos la sesión del usuario
-          await Sesion.findOneAndUpdate(
-            { usuario: usuario._id, fuente: <string>source },
-            {
-              ip: <string>ip,
-              dispositivo: <string>device,
-              navegador: <string>browser,
-              estado: 'online'
-            },
-            { new: true, runValidators: true, context: 'query' }
-          )
 
           // Definimos los datos del usuario enviados en la respuesta
           const usuarioResponse: IUsuarioResponse = {
@@ -158,11 +142,8 @@ export const check: Handler = async (req, res) => {
 // Inicio de sesión del usuario //
 /*******************************************************************************************************/
 export const login: Handler = async (req, res) => {
-  // Leemos las cabeceras y el cuerpo de la petición
-  const { headers, body } = req
-
-  // Obtenemos el Ip, Dispositivo y Navegador de origen
-  const { source, ip, device, browser } = headers
+  // Leemos el cuerpo de la petición
+  const { body } = req
 
   try {
     // Intentamos realizar la búsqueda por DNI del usuario
@@ -198,38 +179,6 @@ export const login: Handler = async (req, res) => {
 
     // Obtenemos los datos de las elecciones actuales
     const eleccion: IEleccion | null = await Eleccion.findOne({ actual: true })
-
-    // Realizamos la búsqueda en sesión con el id del usuario
-    const sesion: ISesion | null = await Sesion.findOne({
-      usuario: usuario._id,
-      fuente: <string>source
-    })
-    // Si existe una sesíon
-    if (sesion) {
-      // Realizamos la búsqueda por id y actualizamos
-      await Sesion.findOneAndUpdate(
-        { usuario: usuario._id, fuente: <string>source },
-        {
-          ip: <string>ip,
-          dispositivo: <string>device,
-          navegador: <string>browser,
-          estado: 'online'
-        },
-        { new: true, runValidators: true, context: 'query' }
-      )
-    } else {
-      // Creamos el modelo de una nueva sesión
-      const newSesion: ISesion = new Sesion({
-        usuario: usuario._id,
-        fuente: <string>source,
-        ip: <string>ip,
-        dispositivo: <string>device,
-        navegador: <string>browser
-      })
-
-      // Guardamos la nueva sesión
-      await newSesion.save()
-    }
 
     // Definimos los datos del usuario enviados en la respuesta
     const usuarioResponse: IUsuarioResponse = {
@@ -284,48 +233,6 @@ export const login: Handler = async (req, res) => {
     return res.status(404).json({
       status: false,
       msg: 'Hubo un error en la validación del usuario'
-    })
-  }
-}
-
-/*******************************************************************************************************/
-// Cierre de sesión del usuario //
-/*******************************************************************************************************/
-export const logout: Handler = async (req, res) => {
-  // Leemos las cabeceras y el usuario de la petición
-  const { headers, usuario } = req
-
-  // Obtenemos el Ip, Dispositivo y Navegador de origen
-  const { source, ip, device, browser } = headers
-
-  try {
-    // Intentamos realizar la búsqueda en sesión con el id del usuario y actualizamos
-    await Sesion.findOneAndUpdate(
-      { usuario: usuario._id },
-      {
-        $set: {
-          fuente: <string>source,
-          ip: <string>ip,
-          dispositivo: <string>device,
-          navegador: <string>browser,
-          estado: 'offline'
-        }
-      },
-      { new: true }
-    )
-
-    // Retornamos los datos de la sesión
-    return res.json({
-      status: true,
-      msg: 'Se cerró la sesión del usuario correctamente'
-    })
-  } catch (error) {
-    // Mostramos el error en consola
-    console.log('Logout actualizando sesión:', error)
-    // Retornamos
-    return res.status(404).json({
-      status: false,
-      msg: 'No se pudo cerrar sesión del usuario'
     })
   }
 }

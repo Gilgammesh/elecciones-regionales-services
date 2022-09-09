@@ -6,7 +6,6 @@ import Sesion, { ISesion } from '../../models/admin/sesion'
 import Usuario, { IUsuario } from '../../models/usuario'
 import { parseMomentDate12HDay } from '../../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../../helpers/pagination'
-import { Error } from 'mongoose'
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
@@ -104,6 +103,7 @@ export const getAll: Handler = async (req, res) => {
           _id: ele.usuario._id,
           nombres: ele.usuario.nombres,
           apellidos: ele.usuario.apellidos,
+          dni: ele.usuario.dni,
           rol: {
             _id: ele.usuario.rol._id,
             nombre: ele.usuario.rol.nombre
@@ -136,108 +136,6 @@ export const getAll: Handler = async (req, res) => {
     return res.status(404).json({
       status: false,
       msg: 'No se pudo obtener las sesiones'
-    })
-  }
-}
-
-/*******************************************************************************************************/
-// Actualizar los datos de una sesión //
-/*******************************************************************************************************/
-export const update: Handler = async (req, res) => {
-  // Leemos las cabeceras, el usuario y el cuerpo de la petición
-  const { headers, usuario, body } = req
-
-  // Obtenemos el Ip, Dispositivo y Navegador de origen
-  const { source, ip, device, browser } = headers
-
-  try {
-    // Intentamos realizar la búsqueda por id de usuario y actualizamos
-    await Sesion.findOneAndUpdate(
-      { usuario: usuario._id, fuente: <string>source },
-      {
-        ip: <string>ip,
-        dispositivo: <string>device,
-        navegador: <string>browser,
-        estado: body.estado
-      },
-      { new: true, runValidators: true, context: 'query' }
-    )
-
-    // Si existe un servidor socketIO
-    if (globalThis.socketIO) {
-      // Emitimos el evento => sesión actualizada en el módulo administrador
-      globalThis.socketIO.to('intranet').emit('admin-sesion-actualizada')
-    }
-
-    // Obtenemos los datos de la sesión de respuesta
-    const sesionRes: ISesion | null = await Sesion.findOne({
-      usuario: usuario._id,
-      fuente: <string>source
-    }).populate({
-      path: 'usuario',
-      select: exclude_campos,
-      populate: { path: 'rol', select: exclude_campos }
-    })
-
-    // Si existe una sesión de respuesta
-    if (sesionRes) {
-      // Fecha del último ingreso
-      const ultimo_ingreso: string = parseMomentDate12HDay(sesionRes.updatedAt)
-      // Fecha de creación del usuario
-      const primer_ingreso: string = parseMomentDate12HDay(sesionRes.createdAt)
-
-      // Retornamos
-      return res.json({
-        status: true,
-        msg: 'Se actualizó la sesión correctamente',
-        sesion: {
-          _id: sesionRes._id,
-          usuario: {
-            _id: sesionRes.usuario._id,
-            nombres: sesionRes.usuario.nombres,
-            apellidos: sesionRes.usuario.apellidos,
-            rol: {
-              _id: sesionRes.usuario.rol._id,
-              nombre: sesionRes.usuario.rol.nombre
-            }
-          },
-          fuente: sesionRes.fuente,
-          ip: sesionRes.ip,
-          dispositivo: sesionRes.dispositivo,
-          navegador: sesionRes.navegador,
-          ultimo_ingreso,
-          primer_ingreso,
-          estado: sesionRes.estado
-        }
-      })
-    } else {
-      // Retornamos
-      return res.status(404).json({
-        status: false,
-        msg: 'No se pudo obtener los datos de la sesión actualizada'
-      })
-    }
-  } catch (error: unknown) {
-    // Mostramos el error en consola
-    console.log('Admin', 'Actualizando sesión', usuario, error)
-
-    // Inicializamos el mensaje de error
-    let msg = 'No se pudo actualizar los datos de la sesión'
-    if (error instanceof Error.ValidationError) {
-      // Si existe un error con validación de campo único
-      if (error.errors) {
-        Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
-          }
-        })
-      }
-    }
-
-    // Retornamos
-    return res.status(404).json({
-      status: false,
-      msg
     })
   }
 }
