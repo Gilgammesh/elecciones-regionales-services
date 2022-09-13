@@ -57,5 +57,14 @@ export const timeZone = 'America/Lima'
 export const corsOptions: CorsOptions = {
   origin: '*',
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Authorization', 'Content-Type', 'Source', 'Origin', 'Ip', 'Device', 'Browser']
+  allowedHeaders: [
+    'Authorization',
+    'Content-Type',
+    'Source',
+    'Origin',
+    'Ip',
+    'Device',
+    'Browser',
+    'Platform'
+  ]
 }

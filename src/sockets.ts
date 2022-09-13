@@ -98,7 +98,7 @@ const sockets = (httpServer: HttpServer) => {
   //////////////////////////////////////////////////////////
   io.on('connection', async (socket: Socket) => {
     // Obtenemos el token de autorización del websocket
-    const { token, source, ip, device, browser } = socket.handshake.auth
+    const { token, source, ip, device, browser, platform } = socket.handshake.auth
     const decoded: JwtPayload = <JwtPayload>verify(token, appSecret)
 
     if (decoded && decoded.usuario) {
@@ -192,8 +192,39 @@ const sockets = (httpServer: HttpServer) => {
       // Suscribimos al socket al room app
       socket.join('app')
 
+      // Realizamos la búsqueda en sesión con el id del personero
+      const sesion: ISesion | null = await Sesion.findOne({ personero: decoded.personero._id })
+      // Si existe una sesíon
+      if (sesion) {
+        // Realizamos la búsqueda por id y actualizamos
+        await Sesion.findOneAndUpdate(
+          { personero: decoded.personero._id },
+          {
+            $set: {
+              socketId: socket.id as string,
+              fuente: source as string,
+              dispositivo: device as string,
+              plataforma: platform as string,
+              estado: 'online'
+            }
+          }
+        )
+        // Emitimos los eventos
+        io.to(sesion.socketId).emit('sesion-cerrada')
+      } else {
+        // Creamos el modelo de una nueva sesión y guardamos
+        const newSesion: ISesion = new Sesion({
+          personero: decoded.personero._id,
+          socketId: socket.id as string,
+          fuente: source as string,
+          dispositivo: device as string,
+          plataforma: platform as string
+        })
+        await newSesion.save()
+      }
+
       // Mostramos la desconexión
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         console.log(
           'Cliente App',
           socket.id,
@@ -203,6 +234,16 @@ const sockets = (httpServer: HttpServer) => {
           '->',
           'desconectado',
           socket.disconnected
+        )
+
+        // Realizamos la búsqueda por id y actualizamos
+        await Sesion.findOneAndUpdate(
+          { personero: decoded.personero._id },
+          {
+            $set: {
+              estado: 'offline'
+            }
+          }
         )
       })
     }

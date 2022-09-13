@@ -3,17 +3,20 @@
 /*******************************************************************************************************/
 import { Schema, model, Document, PopulatedDoc } from 'mongoose'
 import { IUsuario } from '../usuario'
+import { IPersonero } from '../centro_votacion/personero'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
 /*******************************************************************************************************/
 export interface ISesion extends Document {
-  usuario: PopulatedDoc<IUsuario>
+  usuario?: PopulatedDoc<IUsuario>
+  personero?: PopulatedDoc<IPersonero>
   socketId: string
   fuente: string
-  ip: string
+  ip?: string
   dispositivo: string
-  navegador: string
+  navegador?: string
+  plataforma?: string
   estado: string
   createdAt: Date
   updatedAt: Date
@@ -26,12 +29,15 @@ const SesionSchema: Schema = new Schema(
   {
     usuario: {
       ref: 'Usuario',
-      type: Schema.Types.ObjectId,
-      required: [true, 'El id del usuario es requerido']
+      type: Schema.Types.ObjectId
+    },
+    personero: {
+      ref: 'CentroVotacionPersonero',
+      type: Schema.Types.ObjectId
     },
     socketId: {
       type: String,
-      required: [true, 'El Id del socket es requerido']
+      required: [true, 'El socket id es requerido']
     },
     fuente: {
       type: String,
@@ -41,26 +47,17 @@ const SesionSchema: Schema = new Schema(
       },
       required: [true, 'La fuente es requerida']
     },
-    ip: {
-      type: String,
-      required: [true, 'El ip es requerido']
-    },
-    dispositivo: {
-      type: String,
-      required: [true, 'El dispositivo es requerido']
-    },
-    navegador: {
-      type: String,
-      required: [true, 'El navegador es requerido']
-    },
+    ip: String,
+    dispositivo: String,
+    navegador: String,
+    plataforma: String,
     estado: {
       type: String,
       enum: {
         values: ['online', 'busy', 'offline'],
         message: '{VALUE}, no es un estado válido. Elija entre: online | busy | offline'
       },
-      default: 'online',
-      required: [true, 'El estado es requerido']
+      default: 'online'
     }
   },
   {
