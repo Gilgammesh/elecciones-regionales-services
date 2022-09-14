@@ -2,11 +2,13 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Schema, model, Document } from 'mongoose'
+import uniqueValidator from 'mongoose-unique-validator'
 
 /*******************************************************************************************************/
 // Interface del Modelo //
 /*******************************************************************************************************/
 export interface IOrganizacion extends Document {
+  orden: number
   nombre: string
   siglas?: string
   logo: string
@@ -21,6 +23,11 @@ export interface IOrganizacion extends Document {
 /*******************************************************************************************************/
 const OrganizacionSchema: Schema = new Schema(
   {
+    orden: {
+      type: Number,
+      unique: true,
+      required: [true, 'El orden es requerido']
+    },
     nombre: {
       type: String,
       required: [true, 'El nombre es requerido'],
@@ -47,6 +54,13 @@ const OrganizacionSchema: Schema = new Schema(
     versionKey: false
   }
 )
+
+/*******************************************************************************************************/
+// Validamos los campos que son únicos, con mensaje personalizado //
+/*******************************************************************************************************/
+OrganizacionSchema.plugin(uniqueValidator, {
+  message: '{VALUE}, ya se encuentra registrado'
+})
 
 /*******************************************************************************************************/
 // Exportamos el modelo de datos //

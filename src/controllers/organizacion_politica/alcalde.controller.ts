@@ -34,12 +34,12 @@ export const getAll: Handler = async (req, res) => {
 
   try {
     // Definimos el query para los alcaldes
-    let queryAlcaldees = {}
+    let queryAlcaldes = {}
 
     // Si existe un query de organizacion politica
     if (query.organizacion) {
-      queryAlcaldees = {
-        ...queryAlcaldees,
+      queryAlcaldes = {
+        ...queryAlcaldes,
         organizacion: query.organizacion
       }
     }
@@ -47,14 +47,14 @@ export const getAll: Handler = async (req, res) => {
     // Filtramos por el query de departamento
     if (query.departamento && query.departamento !== 'todos') {
       if (usuario.rol.super) {
-        queryAlcaldees = {
-          ...queryAlcaldees,
+        queryAlcaldes = {
+          ...queryAlcaldes,
           departamento: query.departamento,
           tipo: 'provincial'
         }
       } else {
-        queryAlcaldees = {
-          ...queryAlcaldees,
+        queryAlcaldes = {
+          ...queryAlcaldes,
           departamento: usuario.departamento?._id,
           tipo: 'provincial'
         }
@@ -63,8 +63,8 @@ export const getAll: Handler = async (req, res) => {
 
     // Filtramos por el query de provincia
     if (query.provincia && query.provincia !== 'todos') {
-      queryAlcaldees = {
-        ...queryAlcaldees,
+      queryAlcaldes = {
+        ...queryAlcaldes,
         provincia: query.provincia,
         $or: [{ tipo: 'provincial' }, { tipo: 'distrital' }]
       }
@@ -72,15 +72,15 @@ export const getAll: Handler = async (req, res) => {
 
     // Filtramos por el query de distrito
     if (query.distrito && query.distrito !== 'todos') {
-      queryAlcaldees = {
-        ...queryAlcaldees,
+      queryAlcaldes = {
+        ...queryAlcaldes,
         distrito: query.distrito,
         tipo: 'distrital'
       }
     }
 
     // Intentamos obtener el total de registros de los alcaldes
-    const totalRegistros: number = await Alcalde.find(queryAlcaldees).count()
+    const totalRegistros: number = await Alcalde.find(queryAlcaldes).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
     const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
@@ -106,7 +106,7 @@ export const getAll: Handler = async (req, res) => {
     const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los alcaldes paginados
-    const list: Array<IAlcalde> = await Alcalde.find(queryAlcaldees, exclude_campos)
+    const list: Array<IAlcalde> = await Alcalde.find(queryAlcaldes, exclude_campos)
       .sort({
         provincia: 'asc',
         tipo: 'desc',
@@ -264,8 +264,8 @@ export const create: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }
@@ -369,8 +369,8 @@ export const update: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }

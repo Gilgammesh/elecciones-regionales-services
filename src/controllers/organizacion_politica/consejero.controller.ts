@@ -34,12 +34,12 @@ export const getAll: Handler = async (req, res) => {
 
   try {
     // Definimos el query para los consejeros
-    let queryConsejeroes = {}
+    let queryConsejeros = {}
 
     // Si existe un query de organizacion politica
     if (query.organizacion) {
-      queryConsejeroes = {
-        ...queryConsejeroes,
+      queryConsejeros = {
+        ...queryConsejeros,
         organizacion: query.organizacion
       }
     }
@@ -47,13 +47,13 @@ export const getAll: Handler = async (req, res) => {
     // Filtramos por el query de departamento
     if (query.departamento && query.departamento !== 'todos') {
       if (usuario.rol.super) {
-        queryConsejeroes = {
-          ...queryConsejeroes,
+        queryConsejeros = {
+          ...queryConsejeros,
           departamento: query.departamento
         }
       } else {
-        queryConsejeroes = {
-          ...queryConsejeroes,
+        queryConsejeros = {
+          ...queryConsejeros,
           departamento: usuario.departamento?._id
         }
       }
@@ -61,14 +61,14 @@ export const getAll: Handler = async (req, res) => {
 
     // Filtramos por el query de provincia
     if (query.provincia && query.provincia !== 'todos') {
-      queryConsejeroes = {
-        ...queryConsejeroes,
+      queryConsejeros = {
+        ...queryConsejeros,
         provincia: query.provincia
       }
     }
 
     // Intentamos obtener el total de registros de los consejeros
-    const totalRegistros: number = await Consejero.find(queryConsejeroes).count()
+    const totalRegistros: number = await Consejero.find(queryConsejeros).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
     const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
@@ -94,7 +94,7 @@ export const getAll: Handler = async (req, res) => {
     const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los consejeros paginados
-    const list: Array<IConsejero> = await Consejero.find(queryConsejeroes, exclude_campos)
+    const list: Array<IConsejero> = await Consejero.find(queryConsejeros, exclude_campos)
       .sort({
         provincia: 'asc',
         numero: 'asc',
@@ -263,8 +263,8 @@ export const create: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }
@@ -373,8 +373,8 @@ export const update: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }

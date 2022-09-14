@@ -36,9 +36,12 @@ export const getAll: Handler = async (req, res) => {
     let totalRegistros: number
     // Si es un superusuario
     if (usuario.rol.super) {
-      totalRegistros = await Sesion.countDocuments()
+      totalRegistros = await Sesion.countDocuments({ fuente: query.fuente as string })
     } else {
-      totalRegistros = await Sesion.find({ $and: queryUsuarios }).count()
+      totalRegistros = await Sesion.find({
+        $and: queryUsuarios,
+        fuente: query.fuente as string
+      }).count()
     }
 
     // Obtenemos el número de registros por página y hacemos las validaciones
@@ -68,7 +71,7 @@ export const getAll: Handler = async (req, res) => {
     let sesiones: Array<ISesion>
     // Si es un superusuario
     if (usuario.rol.super) {
-      sesiones = await Sesion.find()
+      sesiones = await Sesion.find({ fuente: query.fuente as string })
         .sort({ updatedAt: 'desc' })
         .populate({
           path: 'usuario',
@@ -78,7 +81,7 @@ export const getAll: Handler = async (req, res) => {
         .skip((page - 1) * pageSize)
         .limit(pageSize)
     } else {
-      sesiones = await Sesion.find({ $and: queryUsuarios })
+      sesiones = await Sesion.find({ $and: queryUsuarios, fuente: query.fuente as string })
         .sort({ updatedAt: 'desc' })
         .populate({
           path: 'usuario',
