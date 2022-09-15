@@ -5,6 +5,7 @@ node_modules
 dist
 dist_app
 dist_somosperu
+dist_avanza
 
 # Archivos subidos a la Aplicación
 uploads
