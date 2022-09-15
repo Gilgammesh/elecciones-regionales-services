@@ -36,46 +36,65 @@ export const getAll: Handler = async (req, res) => {
     // Definimos el query para los alcaldes
     let queryAlcaldes = {}
 
-    // Si existe un query de organizacion politica
-    if (query.organizacion) {
-      queryAlcaldes = {
-        ...queryAlcaldes,
-        organizacion: query.organizacion
-      }
-    }
-
     // Filtramos por el query de departamento
     if (query.departamento && query.departamento !== 'todos') {
       if (usuario.rol.super) {
         queryAlcaldes = {
           ...queryAlcaldes,
-          departamento: query.departamento,
-          tipo: 'provincial'
+          departamento: query.departamento
         }
       } else {
         queryAlcaldes = {
           ...queryAlcaldes,
-          departamento: usuario.departamento?._id,
-          tipo: 'provincial'
+          departamento: usuario.departamento?._id
         }
       }
     }
 
-    // Filtramos por el query de provincia
-    if (query.provincia && query.provincia !== 'todos') {
-      queryAlcaldes = {
-        ...queryAlcaldes,
-        provincia: query.provincia,
-        $or: [{ tipo: 'provincial' }, { tipo: 'distrital' }]
+    // Si existe un query de búsqueda
+    if (query.searchTipo && query.searchTipo !== '') {
+      if (query.searchTipo === 'nombres') {
+        const searchValueParts = (query.searchValue as string).split(',')
+        queryAlcaldes = {
+          ...queryAlcaldes,
+          nombres: {
+            $regex: `.*${searchValueParts[0].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          },
+          apellidos: {
+            $regex: `.*${searchValueParts[1].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          }
+        }
       }
-    }
-
-    // Filtramos por el query de distrito
-    if (query.distrito && query.distrito !== 'todos') {
-      queryAlcaldes = {
-        ...queryAlcaldes,
-        distrito: query.distrito,
-        tipo: 'distrital'
+    } else {
+      // Si existe un query de tipo de alcalde
+      if (query.tipo && query.tipo !== 'todos') {
+        queryAlcaldes = {
+          ...queryAlcaldes,
+          tipo: query.tipo
+        }
+      }
+      // Si existe un query de organización politica
+      if (query.organizacion && query.organizacion !== 'todos') {
+        queryAlcaldes = {
+          ...queryAlcaldes,
+          organizacion: query.organizacion
+        }
+      }
+      // Filtramos por el query de provincia
+      if (query.provincia && query.provincia !== 'todos') {
+        queryAlcaldes = {
+          ...queryAlcaldes,
+          provincia: query.provincia
+        }
+      }
+      // Filtramos por el query de distrito
+      if (query.distrito && query.distrito !== 'todos') {
+        queryAlcaldes = {
+          ...queryAlcaldes,
+          distrito: query.distrito
+        }
       }
     }
 
@@ -108,13 +127,13 @@ export const getAll: Handler = async (req, res) => {
     // Intentamos realizar la búsqueda de todos los alcaldes paginados
     const list: Array<IAlcalde> = await Alcalde.find(queryAlcaldes, exclude_campos)
       .sort({
-        provincia: 'asc',
         tipo: 'desc',
         nombres: 'asc',
         apellidos: 'asc'
       })
       .populate('departamento', exclude_campos)
       .populate('provincia', exclude_campos)
+      .populate('distrito', exclude_campos)
       .populate('organizacion', exclude_campos)
       .skip((page - 1) * pageSize)
       .limit(pageSize)
@@ -153,6 +172,7 @@ export const get: Handler = async (req, res) => {
     const alcalde: IAlcalde | null = await Alcalde.findById(id, exclude_campos)
       .populate('departamento', exclude_campos)
       .populate('provincia', exclude_campos)
+      .populate('distrito', exclude_campos)
       .populate('organizacion', exclude_campos)
 
     // Retornamos los datos del alcalde
@@ -182,78 +202,120 @@ export const create: Handler = async (req, res) => {
   const { source, origin, ip, device, browser } = headers
 
   try {
-    // Verificamos si ya existe el alcalde
-    const alcaldeU = await Alcalde.findOne({
-      dni: body.dni,
-      organizacion: body.organizacion
-    })
-    // Si existe un alcalde
-    if (alcaldeU) {
-      return res.status(404).json({
-        status: false,
-        msg: `Ya existe el alcalde para esta organización política`
+    let newAlcalde: IAlcalde | null = null
+    if (body.tipo === 'provincial') {
+      // Verificamos si ya existe el alcalde provincial
+      const alcaldeU = await Alcalde.findOne({
+        tipo: body.tipo,
+        organizacion: body.organizacion,
+        departamento: body.departamento,
+        provincia: body.provincia
+      })
+      // Si existe un alcalde provincial
+      if (alcaldeU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe un alcalde para esta provincia y organización política`
+        })
+      }
+      // Creamos el modelo de un nuevo alcalde provincial
+      newAlcalde = new Alcalde({
+        nombres: body.nombres,
+        apellidos: body.apellidos,
+        dni: body.dni,
+        tipo: body.tipo,
+        departamento: body.departamento,
+        provincia: body.provincia,
+        organizacion: body.organizacion
+      })
+    }
+    if (body.tipo === 'distrital') {
+      // Verificamos si ya existe el alcalde distrital
+      const alcaldeU = await Alcalde.findOne({
+        tipo: body.tipo,
+        organizacion: body.organizacion,
+        departamento: body.departamento,
+        provincia: body.provincia,
+        distrito: body.distrito
+      })
+      // Si existe un alcalde distrital
+      if (alcaldeU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe un alcalde para este UbigeoDistrito y organización política`
+        })
+      }
+      // Creamos el modelo de un nuevo alcalde distrital
+      newAlcalde = new Alcalde({
+        nombres: body.nombres,
+        apellidos: body.apellidos,
+        dni: body.dni,
+        tipo: body.tipo,
+        departamento: body.departamento,
+        provincia: body.provincia,
+        distrito: body.distrito,
+        organizacion: body.organizacion
       })
     }
 
-    // Creamos el modelo de un nuevo alcalde
-    const newAlcalde: IAlcalde = new Alcalde(body)
+    if (newAlcalde) {
+      // Path o ruta del archivo
+      const path = join('organizaciones-politicas', 'alcaldes')
+      const pathUrl = 'organizaciones-politicas/alcaldes'
+      const pathDefault = `${getPathUpload()}/${pathUrl}/no-foto.png`
 
-    // Path o ruta del archivo
-    const path = join('organizaciones-politicas', 'alcaldes')
-    const pathUrl = 'organizaciones-politicas/alcaldes'
-    const pathDefault = `${getPathUpload()}/${pathUrl}/no-foto.png`
+      // Si existe un archivo de imagen obtenemos la url pública
+      if (files && Object.keys(files).length > 0 && files.file) {
+        newAlcalde.foto = getUrlFile(<UploadedFile>files.file, pathUrl, newAlcalde._id)
+      } else {
+        newAlcalde.foto = pathDefault
+      }
 
-    // Si existe un archivo de imagen obtenemos la url pública
-    if (files && Object.keys(files).length > 0 && files.file) {
-      newAlcalde.foto = getUrlFile(<UploadedFile>files.file, pathUrl, newAlcalde._id)
-    } else {
-      newAlcalde.foto = pathDefault
+      // Intentamos guardar el nuevo alcalde
+      const alcaldeOut: IAlcalde = await newAlcalde.save()
+
+      // Guardamos el log del evento
+      await saveLog({
+        usuario: usuario._id,
+        fuente: <string>source,
+        origen: <string>origin,
+        ip: <string>ip,
+        dispositivo: <string>device,
+        navegador: <string>browser,
+        modulo: nombre_modulo,
+        submodulo: nombre_submodulo,
+        controller: nombre_controlador,
+        funcion: 'create',
+        descripcion: 'Crear nuevo alcalde de una organización política',
+        evento: eventsLogs.create,
+        data_in: '',
+        data_out: JSON.stringify(alcaldeOut, null, 2),
+        procesamiento: 'unico',
+        registros: 1,
+        id_grupo: `${usuario._id}@${parseNewDate24H_()}`
+      })
+
+      // Si existe un archivo de imagen se crea la ruta y se almacena
+      if (files && Object.keys(files).length > 0 && files.file) {
+        await storeFile(<UploadedFile>files.file, path, newAlcalde._id)
+      }
+
+      // Obtenemos el alcalde creado
+      const alcaldeResp: IAlcalde | null = await Alcalde.findById(alcaldeOut._id, exclude_campos)
+
+      // Si existe un servidor socketIO
+      if (globalThis.socketIO) {
+        // Emitimos el evento => alcalde creado en el módulo organizaciones políticas
+        globalThis.socketIO.to('intranet').emit('organizaciones-politicas-alcalde-creado')
+      }
+
+      // Retornamos el alcalde creado
+      return res.json({
+        status: true,
+        msg: 'Se creó el alcalde correctamente',
+        alcalde: alcaldeResp
+      })
     }
-
-    // Intentamos guardar el nuevo alcalde
-    const alcaldeOut: IAlcalde = await newAlcalde.save()
-
-    // Guardamos el log del evento
-    await saveLog({
-      usuario: usuario._id,
-      fuente: <string>source,
-      origen: <string>origin,
-      ip: <string>ip,
-      dispositivo: <string>device,
-      navegador: <string>browser,
-      modulo: nombre_modulo,
-      submodulo: nombre_submodulo,
-      controller: nombre_controlador,
-      funcion: 'create',
-      descripcion: 'Crear nuevo alcalde de una organización política',
-      evento: eventsLogs.create,
-      data_in: '',
-      data_out: JSON.stringify(alcaldeOut, null, 2),
-      procesamiento: 'unico',
-      registros: 1,
-      id_grupo: `${usuario._id}@${parseNewDate24H_()}`
-    })
-
-    // Si existe un archivo de imagen se crea la ruta y se almacena
-    if (files && Object.keys(files).length > 0 && files.file) {
-      await storeFile(<UploadedFile>files.file, path, newAlcalde._id)
-    }
-
-    // Obtenemos el alcalde creado
-    const alcaldeResp: IAlcalde | null = await Alcalde.findById(alcaldeOut._id, exclude_campos)
-
-    // Si existe un servidor socketIO
-    if (globalThis.socketIO) {
-      // Emitimos el evento => alcalde creado en el módulo organizaciones políticas
-      globalThis.socketIO.to('intranet').emit('organizaciones-politicas-alcalde-creado')
-    }
-
-    // Retornamos el alcalde creado
-    return res.json({
-      status: true,
-      msg: 'Se creó el alcalde correctamente',
-      alcalde: alcaldeResp
-    })
   } catch (error: unknown) {
     // Mostramos el error en consola
     console.log('Organizaciones Políticas', 'Crear nuevo alcalde', error)
@@ -284,7 +346,7 @@ export const create: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, body, files } = req
+  const { headers, usuario, params, query, body, files } = req
   // Obtenemos el Id del alcalde
   const { id } = params
 
@@ -304,13 +366,54 @@ export const update: Handler = async (req, res) => {
     if (files && Object.keys(files).length > 0 && files.file) {
       body.foto = getUrlFile(<UploadedFile>files.file, pathUrl, id)
     } else {
-      body.foto = pathDefault
+      // Si el alcalde tiene una foto
+      if (alcaldeIn?.foto) {
+        // Si se removió la foto
+        if (query.fileState === 'removed') {
+          body.foto = pathDefault
+        }
+        // Caso contrario usamos la foto actual
+        else {
+          body.foto = alcaldeIn.foto
+        }
+      }
+      // Si no hay foto limpiamos la actual
+      else {
+        body.foto = pathDefault
+      }
+    }
+
+    let set = {}
+    if (body.tipo === 'provincial') {
+      set = {
+        nombres: body.nombres,
+        apellidos: body.apellidos,
+        dni: body.dni,
+        foto: body.foto,
+        tipo: body.tipo,
+        departamento: body.departamento,
+        provincia: body.provincia,
+        organizacion: body.organizacion
+      }
+    }
+    if (body.tipo === 'distrital') {
+      set = {
+        nombres: body.nombres,
+        apellidos: body.apellidos,
+        dni: body.dni,
+        foto: body.foto,
+        tipo: body.tipo,
+        departamento: body.departamento,
+        provincia: body.provincia,
+        distrito: body.distrito,
+        organizacion: body.organizacion
+      }
     }
 
     // Intentamos realizar la búsqueda por id y actualizamos
     const alcaldeOut = await Alcalde.findByIdAndUpdate(
       id,
-      { $set: body },
+      { $set: set },
       {
         new: true,
         runValidators: true,
