@@ -36,7 +36,20 @@ export const getAll: Handler = async (req, res) => {
 
   try {
     // Definimos el query para las organizaciones politicas
-    const queryOrganizaciones = { anho: usuario.anho }
+    let queryOrganizaciones = {}
+
+    // Añadimos el año
+    queryOrganizaciones = { ...queryOrganizaciones, anho: usuario.anho }
+
+    if (query.nombre && query.nombre !== '') {
+      queryOrganizaciones = {
+        ...queryOrganizaciones,
+        nombre: {
+          $regex: `.*${`${query.nombre}`.trim().split(/\s/).join('.*')}.*`,
+          $options: 'i'
+        }
+      }
+    }
 
     // Intentamos obtener el total de registros de las organizaciones políticas
     const totalRegistros: number = await Organizacion.find(queryOrganizaciones).count()
@@ -64,9 +77,16 @@ export const getAll: Handler = async (req, res) => {
     }
     const page = validatePage.page as number
 
+    let sort: {
+      [key: string]: string
+    } = { orden: 'asc' }
+    if (query.sort) {
+      sort = { [query.sort as string]: 'asc' }
+    }
+
     // Intentamos realizar la búsqueda de todas las organizaciones politicas paginadas
     const list: Array<IOrganizacion> = await Organizacion.find(queryOrganizaciones, exclude_campos)
-      .sort({ orden: 'asc' })
+      .sort(sort)
       .skip((page - 1) * pageSize)
       .limit(pageSize)
 

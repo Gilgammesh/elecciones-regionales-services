@@ -25,6 +25,7 @@ router.put('/organizaciones/:id', [validarToken, validarRol], organizacion.updat
 router.delete('/organizaciones/:id', [validarToken, validarRol], organizacion.remove)
 
 // Gobernadores
+router.get('/gobernadores/organizaciones', [validarToken, validarRol], organizacion.getAll)
 router.get('/gobernadores', [validarToken, validarRol], gobernador.getAll)
 router.post('/gobernadores', [validarToken, validarRol], gobernador.create)
 router.get('/gobernadores/:id', [validarToken, validarRol], gobernador.get)
@@ -32,6 +33,7 @@ router.put('/gobernadores/:id', [validarToken, validarRol], gobernador.update)
 router.delete('/gobernadores/:id', [validarToken, validarRol], gobernador.remove)
 
 // Consejeros
+router.get('/consejeros/organizaciones', [validarToken, validarRol], organizacion.getAll)
 router.get('/consejeros', [validarToken, validarRol], consejero.getAll)
 router.post('/consejeros', [validarToken, validarRol], consejero.create)
 router.get('/consejeros/:id', [validarToken, validarRol], consejero.get)
@@ -39,6 +41,7 @@ router.put('/consejeros/:id', [validarToken, validarRol], consejero.update)
 router.delete('/consejeros/:id', [validarToken, validarRol], consejero.remove)
 
 // Alcaldes
+router.get('/alcaldes/organizaciones', [validarToken, validarRol], organizacion.getAll)
 router.get('/alcaldes', [validarToken, validarRol], alcalde.getAll)
 router.post('/alcaldes', [validarToken, validarRol], alcalde.create)
 router.get('/alcaldes/:id', [validarToken, validarRol], alcalde.get)

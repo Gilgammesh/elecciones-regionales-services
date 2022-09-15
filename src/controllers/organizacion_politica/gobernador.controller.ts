@@ -36,14 +36,6 @@ export const getAll: Handler = async (req, res) => {
     // Definimos el query para los gobernadores
     let queryGobernadores = {}
 
-    // Si existe un query de organizacion politica
-    if (query.organizacion) {
-      queryGobernadores = {
-        ...queryGobernadores,
-        organizacion: query.organizacion
-      }
-    }
-
     // Filtramos por el query de departamento
     if (query.departamento && query.departamento !== 'todos') {
       if (usuario.rol.super) {
@@ -55,6 +47,32 @@ export const getAll: Handler = async (req, res) => {
         queryGobernadores = {
           ...queryGobernadores,
           departamento: usuario.departamento?._id
+        }
+      }
+    }
+
+    // Si existe un query de búsqueda
+    if (query.searchTipo && query.searchTipo !== '') {
+      if (query.searchTipo === 'nombres') {
+        const searchValueParts = (query.searchValue as string).split(',')
+        queryGobernadores = {
+          ...queryGobernadores,
+          nombres: {
+            $regex: `.*${searchValueParts[0].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          },
+          apellidos: {
+            $regex: `.*${searchValueParts[1].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          }
+        }
+      }
+    } else {
+      // Si existe un query de organización politica
+      if (query.organizacion && query.organizacion !== 'todos') {
+        queryGobernadores = {
+          ...queryGobernadores,
+          organizacion: query.organizacion
         }
       }
     }
@@ -155,16 +173,16 @@ export const create: Handler = async (req, res) => {
   const { source, origin, ip, device, browser } = headers
 
   try {
-    // Verificamos si ya existe el gobernador
+    // Verificamos si ya existe un gobernador para la organización
     const gobernadorU = await Gobernador.findOne({
-      dni: body.dni,
-      organizacion: body.organizacion
+      organizacion: body.organizacion,
+      departamento: body.departamento
     })
     // Si existe un gobernador
     if (gobernadorU) {
       return res.status(404).json({
         status: false,
-        msg: `Ya existe el gobernador para esta organización política`
+        msg: `Ya existe un gobernador para este departamento y organización política`
       })
     }
 
@@ -260,7 +278,7 @@ export const create: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, body, files } = req
+  const { headers, usuario, params, query, body, files } = req
   // Obtenemos el Id del gobernador
   const { id } = params
 
@@ -280,7 +298,21 @@ export const update: Handler = async (req, res) => {
     if (files && Object.keys(files).length > 0 && files.file) {
       body.foto = getUrlFile(<UploadedFile>files.file, pathUrl, id)
     } else {
-      body.foto = pathDefault
+      // Si el gobernador tiene una foto
+      if (gobernadorIn?.foto) {
+        // Si se removió la foto
+        if (query.fileState === 'removed') {
+          body.foto = pathDefault
+        }
+        // Caso contrario usamos la foto actual
+        else {
+          body.foto = gobernadorIn.foto
+        }
+      }
+      // Si no hay foto limpiamos la actual
+      else {
+        body.foto = pathDefault
+      }
     }
 
     // Intentamos realizar la búsqueda por id y actualizamos

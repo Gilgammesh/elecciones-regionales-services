@@ -36,14 +36,6 @@ export const getAll: Handler = async (req, res) => {
     // Definimos el query para los consejeros
     let queryConsejeros = {}
 
-    // Si existe un query de organizacion politica
-    if (query.organizacion) {
-      queryConsejeros = {
-        ...queryConsejeros,
-        organizacion: query.organizacion
-      }
-    }
-
     // Filtramos por el query de departamento
     if (query.departamento && query.departamento !== 'todos') {
       if (usuario.rol.super) {
@@ -59,11 +51,36 @@ export const getAll: Handler = async (req, res) => {
       }
     }
 
-    // Filtramos por el query de provincia
-    if (query.provincia && query.provincia !== 'todos') {
-      queryConsejeros = {
-        ...queryConsejeros,
-        provincia: query.provincia
+    // Si existe un query de búsqueda
+    if (query.searchTipo && query.searchTipo !== '') {
+      if (query.searchTipo === 'nombres') {
+        const searchValueParts = (query.searchValue as string).split(',')
+        queryConsejeros = {
+          ...queryConsejeros,
+          nombres: {
+            $regex: `.*${searchValueParts[0].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          },
+          apellidos: {
+            $regex: `.*${searchValueParts[1].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          }
+        }
+      }
+    } else {
+      // Si existe un query de organización politica
+      if (query.organizacion && query.organizacion !== 'todos') {
+        queryConsejeros = {
+          ...queryConsejeros,
+          organizacion: query.organizacion
+        }
+      }
+      // Filtramos por el query de provincia
+      if (query.provincia && query.provincia !== 'todos') {
+        queryConsejeros = {
+          ...queryConsejeros,
+          provincia: query.provincia
+        }
       }
     }
 
@@ -172,14 +189,16 @@ export const create: Handler = async (req, res) => {
   try {
     // Verificamos si ya existe el consejero
     const consejeroU = await Consejero.findOne({
-      dni: body.dni,
-      organizacion: body.organizacion
+      numero: body.numero,
+      organizacion: body.organizacion,
+      departamento: body.departamento,
+      provincia: body.provincia
     })
     // Si existe un consejero
     if (consejeroU) {
       return res.status(404).json({
         status: false,
-        msg: `Ya existe el consejero para esta organización política`
+        msg: `Ya existe un consejero con este número para esta provincia y organización política`
       })
     }
 
@@ -283,7 +302,7 @@ export const create: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, body, files } = req
+  const { headers, usuario, params, query, body, files } = req
   // Obtenemos el Id del consejero
   const { id } = params
 
@@ -308,7 +327,21 @@ export const update: Handler = async (req, res) => {
     if (files && Object.keys(files).length > 0 && files.file) {
       body.foto = getUrlFile(<UploadedFile>files.file, pathUrl, id)
     } else {
-      body.foto = pathDefault
+      // Si el consejero tiene una foto
+      if (consejeroIn?.foto) {
+        // Si se removió la foto
+        if (query.fileState === 'removed') {
+          body.foto = pathDefault
+        }
+        // Caso contrario usamos la foto actual
+        else {
+          body.foto = consejeroIn.foto
+        }
+      }
+      // Si no hay foto limpiamos la actual
+      else {
+        body.foto = pathDefault
+      }
     }
 
     // Intentamos realizar la búsqueda por id y actualizamos
