@@ -34,41 +34,58 @@ export const getAll: Handler = async (req, res) => {
 
   try {
     // Definimos el query para los consejeros
-    let queryConsejeroes = {}
-
-    // Si existe un query de organizacion politica
-    if (query.organizacion) {
-      queryConsejeroes = {
-        ...queryConsejeroes,
-        organizacion: query.organizacion
-      }
-    }
+    let queryConsejeros = {}
 
     // Filtramos por el query de departamento
     if (query.departamento && query.departamento !== 'todos') {
       if (usuario.rol.super) {
-        queryConsejeroes = {
-          ...queryConsejeroes,
+        queryConsejeros = {
+          ...queryConsejeros,
           departamento: query.departamento
         }
       } else {
-        queryConsejeroes = {
-          ...queryConsejeroes,
+        queryConsejeros = {
+          ...queryConsejeros,
           departamento: usuario.departamento?._id
         }
       }
     }
 
-    // Filtramos por el query de provincia
-    if (query.provincia && query.provincia !== 'todos') {
-      queryConsejeroes = {
-        ...queryConsejeroes,
-        provincia: query.provincia
+    // Si existe un query de búsqueda
+    if (query.searchTipo && query.searchTipo !== '') {
+      if (query.searchTipo === 'nombres') {
+        const searchValueParts = (query.searchValue as string).split(',')
+        queryConsejeros = {
+          ...queryConsejeros,
+          nombres: {
+            $regex: `.*${searchValueParts[0].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          },
+          apellidos: {
+            $regex: `.*${searchValueParts[1].trim().split(/\s/).join('.*')}.*`,
+            $options: 'i'
+          }
+        }
+      }
+    } else {
+      // Si existe un query de organización politica
+      if (query.organizacion && query.organizacion !== 'todos') {
+        queryConsejeros = {
+          ...queryConsejeros,
+          organizacion: query.organizacion
+        }
+      }
+      // Filtramos por el query de provincia
+      if (query.provincia && query.provincia !== 'todos') {
+        queryConsejeros = {
+          ...queryConsejeros,
+          provincia: query.provincia
+        }
       }
     }
 
     // Intentamos obtener el total de registros de los consejeros
-    const totalRegistros: number = await Consejero.find(queryConsejeroes).count()
+    const totalRegistros: number = await Consejero.find(queryConsejeros).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones
     const validatePageSize = await getPageSize(pagination.pageSize, query.pageSize as string)
@@ -94,7 +111,7 @@ export const getAll: Handler = async (req, res) => {
     const page = validatePage.page as number
 
     // Intentamos realizar la búsqueda de todos los consejeros paginados
-    const list: Array<IConsejero> = await Consejero.find(queryConsejeroes, exclude_campos)
+    const list: Array<IConsejero> = await Consejero.find(queryConsejeros, exclude_campos)
       .sort({
         provincia: 'asc',
         numero: 'asc',
@@ -172,14 +189,16 @@ export const create: Handler = async (req, res) => {
   try {
     // Verificamos si ya existe el consejero
     const consejeroU = await Consejero.findOne({
-      dni: body.dni,
-      organizacion: body.organizacion
+      numero: body.numero,
+      organizacion: body.organizacion,
+      departamento: body.departamento,
+      provincia: body.provincia
     })
     // Si existe un consejero
     if (consejeroU) {
       return res.status(404).json({
         status: false,
-        msg: `Ya existe el consejero para esta organización política`
+        msg: `Ya existe un consejero con este número para esta provincia y organización política`
       })
     }
 
@@ -263,8 +282,8 @@ export const create: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }
@@ -283,7 +302,7 @@ export const create: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, body, files } = req
+  const { headers, usuario, params, query, body, files } = req
   // Obtenemos el Id del consejero
   const { id } = params
 
@@ -308,7 +327,21 @@ export const update: Handler = async (req, res) => {
     if (files && Object.keys(files).length > 0 && files.file) {
       body.foto = getUrlFile(<UploadedFile>files.file, pathUrl, id)
     } else {
-      body.foto = pathDefault
+      // Si el consejero tiene una foto
+      if (consejeroIn?.foto) {
+        // Si se removió la foto
+        if (query.fileState === 'removed') {
+          body.foto = pathDefault
+        }
+        // Caso contrario usamos la foto actual
+        else {
+          body.foto = consejeroIn.foto
+        }
+      }
+      // Si no hay foto limpiamos la actual
+      else {
+        body.foto = pathDefault
+      }
     }
 
     // Intentamos realizar la búsqueda por id y actualizamos
@@ -373,8 +406,8 @@ export const update: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }

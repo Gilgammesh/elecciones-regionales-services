@@ -259,8 +259,8 @@ export const create: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }
@@ -346,8 +346,8 @@ export const update: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }

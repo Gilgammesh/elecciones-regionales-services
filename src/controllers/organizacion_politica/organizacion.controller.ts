@@ -36,7 +36,20 @@ export const getAll: Handler = async (req, res) => {
 
   try {
     // Definimos el query para las organizaciones politicas
-    const queryOrganizaciones = { anho: usuario.anho }
+    let queryOrganizaciones = {}
+
+    // Añadimos el año
+    queryOrganizaciones = { ...queryOrganizaciones, anho: usuario.anho }
+
+    if (query.nombre && query.nombre !== '') {
+      queryOrganizaciones = {
+        ...queryOrganizaciones,
+        nombre: {
+          $regex: `.*${`${query.nombre}`.trim().split(/\s/).join('.*')}.*`,
+          $options: 'i'
+        }
+      }
+    }
 
     // Intentamos obtener el total de registros de las organizaciones políticas
     const totalRegistros: number = await Organizacion.find(queryOrganizaciones).count()
@@ -64,9 +77,16 @@ export const getAll: Handler = async (req, res) => {
     }
     const page = validatePage.page as number
 
+    let sort: {
+      [key: string]: string
+    } = { orden: 'asc' }
+    if (query.sort) {
+      sort = { [query.sort as string]: 'asc' }
+    }
+
     // Intentamos realizar la búsqueda de todas las organizaciones politicas paginadas
     const list: Array<IOrganizacion> = await Organizacion.find(queryOrganizaciones, exclude_campos)
-      .sort({ nombre: 'asc' })
+      .sort(sort)
       .skip((page - 1) * pageSize)
       .limit(pageSize)
 
@@ -227,8 +247,8 @@ export const create: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }
@@ -247,7 +267,7 @@ export const create: Handler = async (req, res) => {
 /*******************************************************************************************************/
 export const update: Handler = async (req, res) => {
   // Leemos las cabeceras, el usuario, los parámetros, query, el cuerpo y los archivos de la petición
-  const { headers, usuario, params, body, files } = req
+  const { headers, usuario, params, query, body, files } = req
   // Obtenemos el Id de la organización política
   const { id } = params
 
@@ -267,7 +287,21 @@ export const update: Handler = async (req, res) => {
     if (files && Object.keys(files).length > 0 && files.file) {
       body.logo = getUrlFile(<UploadedFile>files.file, pathUrl, id)
     } else {
-      body.logo = pathDefault
+      // Si la organización tiene un logo
+      if (organizacionIn?.logo) {
+        // Si se removió el logo
+        if (query.fileState === 'removed') {
+          body.logo = pathDefault
+        }
+        // Caso contrario usamos el logo actual
+        else {
+          body.logo = organizacionIn.logo
+        }
+      }
+      // Si no hay logo limpiamos la actual
+      else {
+        body.logo = pathDefault
+      }
     }
 
     // Intentamos realizar la búsqueda por id y actualizamos
@@ -332,8 +366,8 @@ export const update: Handler = async (req, res) => {
       // Si existe un error con validación de campo único
       if (error.errors) {
         Object.entries(error.errors).forEach((item, index) => {
-          if (item instanceof Error.ValidatorError && index === 0) {
-            msg = `${item.path}: ${item.properties.message}`
+          if (item[1] instanceof Error.ValidatorError && index === 0) {
+            msg = `${item[1].path}: ${item[1].properties.message}`
           }
         })
       }
