@@ -2,7 +2,7 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
-import Mesa, { EActaEstadoMesa, IMesa } from '../../models/centro_votacion/mesa'
+import Mesa, { IMesa } from '../../models/centro_votacion/mesa'
 import { TiposPersonero } from '../centro_votacion/mesa.controller'
 
 /*******************************************************************************************************/
@@ -66,43 +66,6 @@ export const get: Handler = async (req, res) => {
     return res.json({
       status: false,
       msg: 'No se pudo obtener los datos de la mesa o mesas del personero'
-    })
-  }
-}
-
-/*******************************************************************************************************/
-// Reabrir acta regional o provincial de una mesa  //
-/*******************************************************************************************************/
-export const reopen: Handler = async (req, res) => {
-  // Leemos los parámetris y el query de la petición
-  const { params, query } = req
-  // Obtenemos el Id de la mesa
-  const { id } = params
-
-  try {
-    await Mesa.findByIdAndUpdate(id, {
-      $set: {
-        ...(query.acta && query.acta === 'regional' && { acta_reg: EActaEstadoMesa.Reabierto }),
-        ...(query.acta && query.acta === 'provincial' && { acta_prov: EActaEstadoMesa.Reabierto })
-      }
-    })
-
-    // Si existe un servidor socketIO
-    if (globalThis.socketIO) {
-      // Emitimos el evento => acta (regional o provincial) reabierta
-      globalThis.socketIO.to('app').emit('acta-reopen')
-    }
-
-    return res.json({
-      status: true
-    })
-  } catch (error) {
-    // Mostramos el error en consola
-    console.log('App Personero', 'Reabriendo acta de la mesa', id, error)
-    // Retornamos
-    return res.json({
-      status: false,
-      msg: 'No se pudo reabrir el acta de la mesa'
     })
   }
 }

@@ -25,7 +25,6 @@ router.post('/auth/token', auth.token)
 
 // Mesas
 router.get('/mesas', validarToken, mesa.get)
-router.put('/mesa/:id/reopen', validarToken, mesa.reopen)
 
 // Organizaciones Políticas
 router.get('/organizaciones-politicas/gobernadores', validarToken, gobernador.get)

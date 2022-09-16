@@ -53,7 +53,7 @@ export const get: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Organizaciones Políticas', 'Obteniendo la lista de alcaldes', error)
+    console.log('App Mesa', 'Obteniendo la lista de alcaldes', error)
     // Retornamos
     return res.status(404).json({
       status: false,
