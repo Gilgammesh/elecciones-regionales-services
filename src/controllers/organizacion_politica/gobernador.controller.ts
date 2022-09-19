@@ -289,6 +289,21 @@ export const update: Handler = async (req, res) => {
     // Intentamos obtener el gobernador antes que se actualice
     const gobernadorIn: IGobernador | null = await Gobernador.findById(id)
 
+    if (gobernadorIn && `${body.organizacion}` !== `${gobernadorIn?.organizacion}`) {
+      // Verificamos si ya existe un gobernador para la organización
+      const gobernadorU = await Gobernador.findOne({
+        organizacion: body.organizacion,
+        departamento: body.departamento
+      })
+      // Si existe un gobernador
+      if (gobernadorU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe un gobernador para este departamento y organización política`
+        })
+      }
+    }
+
     // Path o ruta del archivo
     const path = join('organizaciones-politicas', 'gobernadores')
     const pathUrl = 'organizaciones-politicas/gobernadores'

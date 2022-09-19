@@ -3,13 +3,13 @@
 /*******************************************************************************************************/
 import { Handler } from 'express'
 import mongoose from 'mongoose'
-import Voto, { ETipoVoto } from '../../models/voto'
-import Mesa, { EActaEstadoMesa } from '../../models/centro_votacion/mesa'
-import Organizacion, { IOrganizacion } from '../../models/organizacion_politica/organizacion'
-import Consejero from '../../models/organizacion_politica/consejero'
-import Gobernador from '../../models/organizacion_politica/gobernador'
-import Alcalde from '../../models/organizacion_politica/alcalde'
-import Distrito, { IDistrito } from '../../models/ubigeo/distrito'
+import Voto, { ETipoVoto } from '../models/voto'
+import Mesa, { EActaEstadoMesa } from '../models/centro_votacion/mesa'
+import Organizacion, { IOrganizacion } from '../models/organizacion_politica/organizacion'
+import Gobernador from '../models/organizacion_politica/gobernador'
+import Consejero from '../models/organizacion_politica/consejero'
+import Alcalde from '../models/organizacion_politica/alcalde'
+import Distrito, { IDistrito } from '../models/ubigeo/distrito'
 
 /*******************************************************************************************************/
 // Interfaces del controlador //
@@ -143,10 +143,10 @@ export const upsert: Handler = async (req, res) => {
     } catch (error) {
       // Mostramos el error en consola
       if (body.tipo === 'regional') {
-        console.log('App Mesa', 'Guardando votos de regionales y consejeros', error)
+        console.log('Monitoreo Votos', 'Guardando votos de regionales y consejeros', error)
       }
       if (body.tipo === 'provincial') {
-        console.log('App Mesa', 'Guardando votos de provinciales y distritales', error)
+        console.log('Monitoreo Votos', 'Guardando votos de provinciales y distritales', error)
       }
       await Mesa.findByIdAndUpdate(body.row._id, {
         $set: {
@@ -167,15 +167,15 @@ export const upsert: Handler = async (req, res) => {
 // Obtener votos regionales de una mesa //
 /*******************************************************************************************************/
 export const regional: Handler = async (req, res) => {
-  // Leemos el personero, query y los parámetros de la petición
-  const { personero, query, params } = req
+  // Leemos el usuario, query y los parámetros de la petición
+  const { usuario, query, params } = req
   // Obtenemos el Id de la mesa
   const { id } = params
-  // Obtenemos el año del personero
-  const { anho } = personero
+  // Obtenemos el año del usuario
+  const { anho } = usuario
 
   try {
-    // Intentamos realizar la búsqueda de todos los gobernadores
+    // Intentamos realizar la búsqueda de todos los gobernadores y consejeros
     const list = await Organizacion.aggregate([
       {
         $match: { anho, estado: true }
@@ -325,7 +325,7 @@ export const regional: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log('App Mesa', 'Obteniendo votos regionales de la mesa', error)
+    console.log('Monitoreo Votos', 'Obteniendo votos regionales de la mesa', error)
     // Retornamos
     return res.status(404).json({
       status: false,
@@ -338,12 +338,12 @@ export const regional: Handler = async (req, res) => {
 // Obtener votos provinciales y distritales de una mesa //
 /*******************************************************************************************************/
 export const provincial: Handler = async (req, res) => {
-  // Leemos el personero, los parámetros y query de la petición
-  const { personero, params, query } = req
+  // Leemos el usuario, query y los parámetros de la petición
+  const { usuario, query, params } = req
   // Obtenemos el Id de la mesa
   const { id } = params
-  // Obtenemos el año del personero
-  const { anho } = personero
+  // Obtenemos el año del usuario
+  const { anho } = usuario
 
   try {
     // Verificamos si el distrito es capital de provincia
@@ -586,7 +586,7 @@ export const provincial: Handler = async (req, res) => {
     }
   } catch (error) {
     // Mostramos el error en consola
-    console.log('App Mesa', 'Obteniendo votos provinciales y distritales de la mesa', error)
+    console.log('Monitoreo Votos', 'Obteniendo votos provinciales y distritales de la mesa', error)
     // Retornamos
     return res.status(404).json({
       status: false,

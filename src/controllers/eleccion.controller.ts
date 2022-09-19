@@ -4,10 +4,12 @@
 import { Handler } from 'express'
 import { Error } from 'mongoose'
 import Eleccion, { IEleccion } from '../models/eleccion'
+import moment from 'moment-timezone'
 import { saveLog } from './admin/log.controller'
 import { parseNewDate24H_ } from '../helpers/date'
 import { getPage, getPageSize, getTotalPages } from '../helpers/pagination'
 import { eventsLogs } from '../models/admin/log'
+import { timeZone } from '../configs'
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
@@ -120,6 +122,15 @@ export const create: Handler = async (req, res) => {
   const { source, origin, ip, device, browser } = headers
 
   try {
+    // Casteamos la fecha de elección
+    const date = moment(body.fecha).tz(timeZone)
+    const dayNro = date.format('DD')
+    const month = date.format('MM')
+    const year = date.format('YYYY')
+    const fecha = `${dayNro}/${month}/${year}`
+    // Reemplazamos por el valor casteado
+    body.fecha = fecha
+
     // Si el año es el actual
     if (body.actual) {
       // Cambiamos el estado de los demás a false
@@ -218,6 +229,15 @@ export const update: Handler = async (req, res) => {
   try {
     // Intentamos obtener la eleccion antes que se actualice
     const eleccionIn: IEleccion | null = await Eleccion.findById(id)
+
+    // Casteamos la fecha de elección
+    const date = moment(body.fecha).tz(timeZone)
+    const dayNro = date.format('DD')
+    const month = date.format('MM')
+    const year = date.format('YYYY')
+    const fecha = `${dayNro}/${month}/${year}`
+    // Reemplazamos por el valor casteado
+    body.fecha = fecha
 
     // Si el año es el actual
     if (body.actual) {

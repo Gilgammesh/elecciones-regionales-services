@@ -5,8 +5,11 @@ import { Handler } from 'express'
 import mongoose from 'mongoose'
 import Mesa, { EActaEstadoMesa, IMesa } from '../models/centro_votacion/mesa'
 import Organizacion from '../models/organizacion_politica/organizacion'
-import Gobernador, { IGobernador } from '../models/organizacion_politica/gobernador'
-import Alcalde, { IAlcalde } from '../models/organizacion_politica/alcalde'
+import Gobernador from '../models/organizacion_politica/gobernador'
+import Consejero from '../models/organizacion_politica/consejero'
+import Alcalde from '../models/organizacion_politica/alcalde'
+import Distrito, { IDistrito } from '../models/ubigeo/distrito'
+import Voto from '../models/voto'
 import { getPage, getPageSize, getTotalPages } from '../helpers/pagination'
 
 /*******************************************************************************************************/
@@ -185,6 +188,45 @@ export const get: Handler = async (req, res) => {
       .skip((page - 1) * pageSize)
       .limit(pageSize)
 
+    // Obtenemos el total de votantes de las mesas
+    const mesas = await Mesa.aggregate([
+      {
+        $match: {
+          anho: usuario.anho,
+          departamento: usuario.rol.super
+            ? new mongoose.Types.ObjectId(query.departamento as string)
+            : usuario.departamento?._id
+        }
+      },
+      {
+        $group: {
+          _id: { anho: '$anho', departamento: '$departamento' },
+          totalVotantes: { $sum: '$votantes' }
+        }
+      }
+    ])
+
+    // Obtenemos el total de votos
+    const votos = await Voto.aggregate([
+      {
+        $match: {
+          anho: usuario.anho,
+          departamento: usuario.rol.super
+            ? new mongoose.Types.ObjectId(query.departamento as string)
+            : usuario.departamento?._id
+        }
+      },
+      {
+        $group: {
+          _id: { anho: '$anho', departamento: '$departamento' },
+          totalVotosGober: { $sum: '$votos_gober' },
+          totalVotosConse: { $sum: '$votos_conse' },
+          totalVotosAlcProv: { $sum: '$votos_alc_prov' },
+          totalVotosAlcDist: { $sum: '$votos_alc_dist' }
+        }
+      }
+    ])
+
     // Retornamos la lista de centros de votación
     return res.json({
       status: true,
@@ -203,7 +245,12 @@ export const get: Handler = async (req, res) => {
         enviadas: totalActasProvEnviadas,
         porenviar: totalActasProvPorenviar,
         reabiertas: totalActasProvReabiertas
-      }
+      },
+      totalVotantes: mesas.length > 0 ? mesas[0].totalVotantes : 0,
+      totalVotosGober: votos.length > 0 ? votos[0].totalVotosGober : 0,
+      totalVotosConse: votos.length > 0 ? votos[0].totalVotosConse : 0,
+      totalVotosAlcProv: votos.length > 0 ? votos[0].totalVotosAlcProv : 0,
+      totalVotosAlcDist: votos.length > 0 ? votos[0].totalVotosAlcDist : 0
     })
   } catch (error) {
     // Mostramos el error en consola
@@ -255,17 +302,17 @@ export const reopen: Handler = async (req, res) => {
 }
 
 /*******************************************************************************************************/
-// Obtener todos los gobernadores de las organizaciones políticas //
+// Obtener todos los gobernadores y consejeros de las organizaciones políticas //
 /*******************************************************************************************************/
-export const gobernadores: Handler = async (req, res) => {
+export const regional: Handler = async (req, res) => {
   // Leemos el usuario y el query de la petición
   const { usuario, query } = req
   // Obtenemos el año del usuario
   const { anho } = usuario
 
   try {
-    // Intentamos realizar la búsqueda de todos los gobernadores
-    const list: Array<IGobernador> = await Organizacion.aggregate([
+    // Intentamos realizar la búsqueda de todos los gobernadores y consejeros
+    const list = await Organizacion.aggregate([
       {
         $match: { anho, estado: true }
       },
@@ -287,11 +334,72 @@ export const gobernadores: Handler = async (req, res) => {
         }
       },
       {
+        $lookup: {
+          from: Consejero.collection.name,
+          localField: '_id',
+          foreignField: 'organizacion',
+          as: 'consejeros'
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          gobernador: {
+            _id: 1,
+            nombres: 1,
+            apellidos: 1,
+            dni: 1,
+            foto: 1
+          },
+          consejeros: {
+            $filter: {
+              input: '$consejeros',
+              as: 'consejero',
+              cond: {
+                $and: [
+                  {
+                    $eq: [
+                      '$$consejero.departamento',
+                      new mongoose.Types.ObjectId(query.departamento as string)
+                    ]
+                  },
+                  {
+                    $eq: [
+                      '$$consejero.provincia',
+                      new mongoose.Types.ObjectId(query.provincia as string)
+                    ]
+                  },
+                  { $eq: ['$$consejero.estado', true] }
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          gobernador: 1,
+          consejeros: {
+            _id: 1,
+            numero: 1,
+            nombres: 1,
+            apellidos: 1,
+            dni: 1,
+            foto: 1
+          }
+        }
+      },
+      {
         $sort: { orden: 1 }
       }
     ])
 
-    // Retornamos la lista de gobernadores
+    // Retornamos la lista de gobernadores y consejeros
     return res.json({
       status: true,
       registros: list.length,
@@ -299,67 +407,168 @@ export const gobernadores: Handler = async (req, res) => {
     })
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Monitoreo', 'Obteniendo la lista de gobernadores', error)
+    console.log('Monitoreo', 'Obteniendo la lista de gobernadores y consejeros', error)
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo obtener los gobernadores'
+      msg: 'No se pudo obtener los gobernadores y consejeros'
     })
   }
 }
 
 /*******************************************************************************************************/
-// Obtener todos los alcaldes de las organizaciones políticas //
+// Obtener todos los alcaldes provinciales y distritales de las organizaciones políticas //
 /*******************************************************************************************************/
-export const alcaldes: Handler = async (req, res) => {
+export const provincial: Handler = async (req, res) => {
   // Leemos el usuario y el query de la petición
   const { usuario, query } = req
   // Obtenemos el año del usuario
   const { anho } = usuario
 
   try {
-    // Intentamos realizar la búsqueda de todos los alcaldes
-    const list: Array<IAlcalde> = await Organizacion.aggregate([
-      {
-        $match: { anho, estado: true }
-      },
-      {
-        $lookup: {
-          from: Alcalde.collection.name,
-          localField: '_id',
-          foreignField: 'organizacion',
-          as: 'alcalde'
-        }
-      },
-      {
-        $unwind: '$alcalde'
-      },
-      {
-        $match: {
-          'alcalde.tipo': 'provincial',
-          'alcalde.departamento': new mongoose.Types.ObjectId(query.departamento as string),
-          'alcalde.provincia': new mongoose.Types.ObjectId(query.provincia as string),
-          'alcalde.estado': true
-        }
-      },
-      {
-        $sort: { orden: 1 }
-      }
-    ])
+    // Verificamos si el distrito es capital de provincia
+    const distrito: IDistrito | null = await Distrito.findById(query.distrito as string)
 
-    // Retornamos la lista de alcaldes
-    return res.json({
-      status: true,
-      registros: list.length,
-      list
-    })
+    // Si existe un distrito
+    if (distrito) {
+      // Si el distrito es capital de provincia
+      if (distrito.codigo === '01') {
+        // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
+        const list = await Organizacion.aggregate([
+          {
+            $match: { anho, estado: true }
+          },
+          {
+            $lookup: {
+              from: Alcalde.collection.name,
+              localField: '_id',
+              foreignField: 'organizacion',
+              as: 'alcaldeProv'
+            }
+          },
+          {
+            $unwind: '$alcaldeProv'
+          },
+          {
+            $match: {
+              'alcaldeProv.tipo': 'provincial',
+              'alcaldeProv.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+              'alcaldeProv.provincia': new mongoose.Types.ObjectId(query.provincia as string),
+              'alcaldeProv.estado': true
+            }
+          },
+          {
+            $project: {
+              orden: 1,
+              nombre: 1,
+              logo: 1,
+              alcaldeProv: {
+                _id: 1,
+                nombres: 1,
+                apellidos: 1,
+                dni: 1,
+                foto: 1
+              }
+            }
+          },
+          {
+            $sort: { orden: 1 }
+          }
+        ])
+
+        // Retornamos la lista de alcaldes
+        return res.json({
+          status: true,
+          registros: list.length,
+          list
+        })
+      } else {
+        // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
+        const list = await Organizacion.aggregate([
+          {
+            $match: { anho, estado: true }
+          },
+          {
+            $lookup: {
+              from: Alcalde.collection.name,
+              localField: '_id',
+              foreignField: 'organizacion',
+              as: 'alcaldeProv'
+            }
+          },
+          {
+            $unwind: '$alcaldeProv'
+          },
+          {
+            $match: {
+              'alcaldeProv.tipo': 'provincial',
+              'alcaldeProv.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+              'alcaldeProv.provincia': new mongoose.Types.ObjectId(query.provincia as string),
+              'alcaldeProv.estado': true
+            }
+          },
+          {
+            $lookup: {
+              from: Alcalde.collection.name,
+              localField: '_id',
+              foreignField: 'organizacion',
+              as: 'alcaldeDist'
+            }
+          },
+          {
+            $unwind: '$alcaldeDist'
+          },
+          {
+            $match: {
+              'alcaldeDist.tipo': 'distrital',
+              'alcaldeDist.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+              'alcaldeDist.provincia': new mongoose.Types.ObjectId(query.provincia as string),
+              'alcaldeDist.distrito': new mongoose.Types.ObjectId(query.distrito as string),
+              'alcaldeDist.estado': true
+            }
+          },
+          {
+            $project: {
+              orden: 1,
+              nombre: 1,
+              logo: 1,
+              alcaldeProv: {
+                _id: 1,
+                nombres: 1,
+                apellidos: 1,
+                dni: 1,
+                foto: 1
+              },
+              alcaldeDist: {
+                _id: 1,
+                nombres: 1,
+                apellidos: 1,
+                dni: 1,
+                foto: 1,
+                distrito: 1
+              }
+            }
+          },
+          {
+            $sort: { orden: 1 }
+          }
+        ])
+
+        // Retornamos la lista de alcaldes
+        return res.json({
+          status: true,
+          registros: list.length,
+          list
+        })
+      }
+    }
   } catch (error) {
     // Mostramos el error en consola
-    console.log('Monitoreo', 'Obteniendo la lista de alcaldes', error)
+    console.log('Monitoreo', 'Obteniendo la lista de alcaldes provinciales y distritales', error)
     // Retornamos
     return res.status(404).json({
       status: false,
-      msg: 'No se pudo obtener los alcaldes'
+      msg: 'No se pudo obtener los alcaldes provinciales y distritales'
     })
   }
 }

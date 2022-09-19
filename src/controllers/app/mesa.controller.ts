@@ -2,8 +2,14 @@
 // Importamos las dependencias //
 /*******************************************************************************************************/
 import { Handler } from 'express'
+import mongoose from 'mongoose'
 import Mesa, { IMesa } from '../../models/centro_votacion/mesa'
 import { TiposPersonero } from '../centro_votacion/mesa.controller'
+import Organizacion from '../../models/organizacion_politica/organizacion'
+import Gobernador from '../../models/organizacion_politica/gobernador'
+import Consejero from '../../models/organizacion_politica/consejero'
+import Alcalde from '../../models/organizacion_politica/alcalde'
+import Distrito, { IDistrito } from '../../models/ubigeo/distrito'
 
 /*******************************************************************************************************/
 // Variables generales del Controlador //
@@ -66,6 +72,278 @@ export const get: Handler = async (req, res) => {
     return res.json({
       status: false,
       msg: 'No se pudo obtener los datos de la mesa o mesas del personero'
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Obtener todos los gobernadores y consejeros de las organizaciones políticas //
+/*******************************************************************************************************/
+export const regional: Handler = async (req, res) => {
+  // Leemos el personero y query de la petición
+  const { personero, query } = req
+  // Obtenemos el año del personero
+  const { anho } = personero
+
+  try {
+    // Intentamos realizar la búsqueda de todos los gobernadores y consejeros
+    const list = await Organizacion.aggregate([
+      {
+        $match: { anho, estado: true }
+      },
+      {
+        $lookup: {
+          from: Gobernador.collection.name,
+          localField: '_id',
+          foreignField: 'organizacion',
+          as: 'gobernador'
+        }
+      },
+      {
+        $unwind: '$gobernador'
+      },
+      {
+        $match: {
+          'gobernador.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+          'gobernador.estado': true
+        }
+      },
+      {
+        $lookup: {
+          from: Consejero.collection.name,
+          localField: '_id',
+          foreignField: 'organizacion',
+          as: 'consejeros'
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          gobernador: {
+            _id: 1,
+            nombres: 1,
+            apellidos: 1,
+            dni: 1,
+            foto: 1
+          },
+          consejeros: {
+            $filter: {
+              input: '$consejeros',
+              as: 'consejero',
+              cond: {
+                $and: [
+                  {
+                    $eq: [
+                      '$$consejero.departamento',
+                      new mongoose.Types.ObjectId(query.departamento as string)
+                    ]
+                  },
+                  {
+                    $eq: [
+                      '$$consejero.provincia',
+                      new mongoose.Types.ObjectId(query.provincia as string)
+                    ]
+                  },
+                  { $eq: ['$$consejero.estado', true] }
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          gobernador: 1,
+          consejeros: {
+            _id: 1,
+            numero: 1,
+            nombres: 1,
+            apellidos: 1,
+            dni: 1,
+            foto: 1
+          }
+        }
+      },
+      {
+        $sort: { orden: 1 }
+      }
+    ])
+
+    // Retornamos la lista de gobernadores y consejeros
+    return res.json({
+      status: true,
+      registros: list.length,
+      list
+    })
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('App Mesa', 'Obteniendo la lista de gobernadores y consejeros', error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los gobernadores y consejeros'
+    })
+  }
+}
+
+/*******************************************************************************************************/
+// Obtener todos los alcaldes provinciales y distritales de las organizaciones políticas //
+/*******************************************************************************************************/
+export const provincial: Handler = async (req, res) => {
+  // Leemos el personero y query de la petición
+  const { personero, query } = req
+  // Obtenemos el año del personero
+  const { anho } = personero
+
+  try {
+    // Verificamos si el distrito es capital de provincia
+    const distrito: IDistrito | null = await Distrito.findById(query.distrito as string)
+
+    // Si existe un distrito
+    if (distrito) {
+      // Si el distrito es capital de provincia
+      if (distrito.codigo === '01') {
+        // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
+        const list = await Organizacion.aggregate([
+          {
+            $match: { anho, estado: true }
+          },
+          {
+            $lookup: {
+              from: Alcalde.collection.name,
+              localField: '_id',
+              foreignField: 'organizacion',
+              as: 'alcaldeProv'
+            }
+          },
+          {
+            $unwind: '$alcaldeProv'
+          },
+          {
+            $match: {
+              'alcaldeProv.tipo': 'provincial',
+              'alcaldeProv.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+              'alcaldeProv.provincia': new mongoose.Types.ObjectId(query.provincia as string),
+              'alcaldeProv.estado': true
+            }
+          },
+          {
+            $project: {
+              orden: 1,
+              nombre: 1,
+              logo: 1,
+              alcaldeProv: {
+                _id: 1,
+                nombres: 1,
+                apellidos: 1,
+                dni: 1,
+                foto: 1
+              }
+            }
+          },
+          {
+            $sort: { orden: 1 }
+          }
+        ])
+
+        // Retornamos la lista de alcaldes
+        return res.json({
+          status: true,
+          registros: list.length,
+          list
+        })
+      } else {
+        // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
+        const list = await Organizacion.aggregate([
+          {
+            $match: { anho, estado: true }
+          },
+          {
+            $lookup: {
+              from: Alcalde.collection.name,
+              localField: '_id',
+              foreignField: 'organizacion',
+              as: 'alcaldeProv'
+            }
+          },
+          {
+            $unwind: '$alcaldeProv'
+          },
+          {
+            $match: {
+              'alcaldeProv.tipo': 'provincial',
+              'alcaldeProv.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+              'alcaldeProv.provincia': new mongoose.Types.ObjectId(query.provincia as string),
+              'alcaldeProv.estado': true
+            }
+          },
+          {
+            $lookup: {
+              from: Alcalde.collection.name,
+              localField: '_id',
+              foreignField: 'organizacion',
+              as: 'alcaldeDist'
+            }
+          },
+          {
+            $unwind: '$alcaldeDist'
+          },
+          {
+            $match: {
+              'alcaldeDist.tipo': 'distrital',
+              'alcaldeDist.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+              'alcaldeDist.provincia': new mongoose.Types.ObjectId(query.provincia as string),
+              'alcaldeDist.distrito': new mongoose.Types.ObjectId(query.distrito as string),
+              'alcaldeDist.estado': true
+            }
+          },
+          {
+            $project: {
+              orden: 1,
+              nombre: 1,
+              logo: 1,
+              alcaldeProv: {
+                _id: 1,
+                nombres: 1,
+                apellidos: 1,
+                dni: 1,
+                foto: 1
+              },
+              alcaldeDist: {
+                _id: 1,
+                nombres: 1,
+                apellidos: 1,
+                dni: 1,
+                foto: 1,
+                distrito: 1
+              }
+            }
+          },
+          {
+            $sort: { orden: 1 }
+          }
+        ])
+
+        // Retornamos la lista de alcaldes
+        return res.json({
+          status: true,
+          registros: list.length,
+          list
+        })
+      }
+    }
+  } catch (error) {
+    // Mostramos el error en consola
+    console.log('App Mesa', 'Obteniendo la lista de alcaldes provinciales y distritales', error)
+    // Retornamos
+    return res.status(404).json({
+      status: false,
+      msg: 'No se pudo obtener los alcaldes provinciales y distritales'
     })
   }
 }

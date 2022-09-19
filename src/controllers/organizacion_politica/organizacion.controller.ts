@@ -278,6 +278,21 @@ export const update: Handler = async (req, res) => {
     // Intentamos obtener la organización política antes que se actualice
     const organizacionIn: IOrganizacion | null = await Organizacion.findById(id)
 
+    if (organizacionIn && `${body.nombre}` !== `${organizacionIn?.nombre}`) {
+      // Verificamos si ya existe la organización política
+      const organizacionU = await Organizacion.findOne({
+        nombre: body.nombre,
+        anho: usuario.anho
+      })
+      // Si existe una organización
+      if (organizacionU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe la organización politica para estas elecciones ${usuario.anho}`
+        })
+      }
+    }
+
     // Path o ruta del archivo
     const path = 'organizaciones-politicas'
     const pathUrl = 'organizaciones-politicas'

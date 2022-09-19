@@ -313,6 +313,43 @@ export const update: Handler = async (req, res) => {
     // Intentamos obtener el consejero antes que se actualice
     const consejeroIn: IConsejero | null = await Consejero.findById(id)
 
+    if (consejeroIn && `${body.organizacion}` !== `${consejeroIn?.organizacion}`) {
+      // Verificamos si ya existe el consejero
+      const consejeroU = await Consejero.findOne({
+        numero: body.numero,
+        organizacion: body.organizacion,
+        departamento: body.departamento,
+        provincia: body.provincia
+      })
+      // Si existe un consejero
+      if (consejeroU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe un consejero con este número para esta provincia y organización política`
+        })
+      }
+    }
+    if (
+      consejeroIn &&
+      `${body.organizacion}` === `${consejeroIn?.organizacion}` &&
+      `${body.numero}` !== `${consejeroIn?.numero}`
+    ) {
+      // Verificamos si ya existe el consejero
+      const consejeroU = await Consejero.findOne({
+        numero: body.numero,
+        organizacion: body.organizacion,
+        departamento: body.departamento,
+        provincia: body.provincia
+      })
+      // Si existe un consejero
+      if (consejeroU) {
+        return res.status(404).json({
+          status: false,
+          msg: `Ya existe un consejero con este número para esta provincia y organización política`
+        })
+      }
+    }
+
     // Casteamos el numero de consejero a entero
     if (body.numero) {
       body.numero = parseInt(body.numero, 10)

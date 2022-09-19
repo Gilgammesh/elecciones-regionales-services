@@ -357,6 +357,44 @@ export const update: Handler = async (req, res) => {
     // Intentamos obtener el alcalde antes que se actualice
     const alcaldeIn: IAlcalde | null = await Alcalde.findById(id)
 
+    if (body.tipo === 'provincial') {
+      if (alcaldeIn && `${body.organizacion}` !== `${alcaldeIn?.organizacion}`) {
+        // Verificamos si ya existe el alcalde provincial
+        const alcaldeU = await Alcalde.findOne({
+          tipo: body.tipo,
+          organizacion: body.organizacion,
+          departamento: body.departamento,
+          provincia: body.provincia
+        })
+        // Si existe un alcalde provincial
+        if (alcaldeU) {
+          return res.status(404).json({
+            status: false,
+            msg: `Ya existe un alcalde para esta provincia y organización política`
+          })
+        }
+      }
+    }
+    if (body.tipo === 'distrital') {
+      if (alcaldeIn && `${body.organizacion}` !== `${alcaldeIn?.organizacion}`) {
+        // Verificamos si ya existe el alcalde distrital
+        const alcaldeU = await Alcalde.findOne({
+          tipo: body.tipo,
+          organizacion: body.organizacion,
+          departamento: body.departamento,
+          provincia: body.provincia,
+          distrito: body.distrito
+        })
+        // Si existe un alcalde distrital
+        if (alcaldeU) {
+          return res.status(404).json({
+            status: false,
+            msg: `Ya existe un alcalde para este UbigeoDistrito y organización política`
+          })
+        }
+      }
+    }
+
     // Path o ruta del archivo
     const path = join('organizaciones-politicas', 'alcaldes')
     const pathUrl = 'organizaciones-politicas/alcaldes'

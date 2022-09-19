@@ -5,8 +5,6 @@ import { Router } from 'express'
 import { validarToken } from '../middlewares/app/authentication'
 import * as auth from '../controllers/app/auth.controller'
 import * as mesa from '../controllers/app/mesa.controller'
-import * as gobernador from '../controllers/app/gobernador.controller'
-import * as alcalde from '../controllers/app/alcalde.controller'
 import * as voto from '../controllers/app/voto.controller'
 
 /*******************************************************************************************************/
@@ -26,17 +24,15 @@ router.post('/auth/token', auth.token)
 // Mesas
 router.get('/mesas', validarToken, mesa.get)
 
-// Organizaciones Políticas
-router.get('/organizaciones-politicas/gobernadores', validarToken, gobernador.get)
-router.get('/organizaciones-politicas/alcaldes', validarToken, alcalde.get)
+// Actas
+router.get('/acta-regional', validarToken, mesa.regional)
+router.get('/acta-provincial', validarToken, mesa.provincial)
 
 // Votaciones
-router.post('/votos/gobernadores', validarToken, voto.upsert)
-router.post('/votos/alcaldes', validarToken, voto.upsert)
-router.get('/votos/gobernadores/:id', validarToken, voto.getRegional)
-router.get('/votos/alcaldes/:id', validarToken, voto.getProvincial)
-router.put('/votos/gobernadores', validarToken, voto.update)
-router.put('/votos/alcaldes', validarToken, voto.update)
+router.post('/votos/regionales', validarToken, voto.upsert)
+router.post('/votos/provinciales', validarToken, voto.upsert)
+router.get('/votos/regionales/:id', validarToken, voto.regional)
+router.get('/votos/provinciales/:id', validarToken, voto.provincial)
 
 /*******************************************************************************************************/
 // Exportamos las rutas definidas en router por defecto //
