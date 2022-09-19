@@ -9,7 +9,6 @@ import Organizacion, { IOrganizacion } from '../../models/organizacion_politica/
 import Consejero from '../../models/organizacion_politica/consejero'
 import Gobernador from '../../models/organizacion_politica/gobernador'
 import Alcalde from '../../models/organizacion_politica/alcalde'
-import Distrito, { IDistrito } from '../../models/ubigeo/distrito'
 
 /*******************************************************************************************************/
 // Interfaces del controlador //
@@ -346,244 +345,186 @@ export const provincial: Handler = async (req, res) => {
   const { anho } = personero
 
   try {
-    // Verificamos si el distrito es capital de provincia
-    const distrito: IDistrito | null = await Distrito.findById(query.distrito as string)
-
-    // Si existe un distrito
-    if (distrito) {
-      // Si el distrito es capital de provincia
-      if (distrito.codigo === '01') {
-        // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
-        const list = await Organizacion.aggregate([
-          {
-            $match: { anho, estado: true }
-          },
-          {
-            $lookup: {
-              from: Voto.collection.name,
-              localField: '_id',
-              foreignField: 'organizacion',
-              as: 'votos'
-            }
-          },
-          {
-            $unwind: '$votos'
-          },
-          {
-            $match: {
-              'votos.mesa': new mongoose.Types.ObjectId(id),
-              'votos.departamento': new mongoose.Types.ObjectId(query.departamento as string),
-              'votos.anho': anho,
-              'votos.tipo': ETipoVoto.Partido
-            }
-          },
-          {
-            $lookup: {
-              from: Alcalde.collection.name,
-              localField: '_id',
-              foreignField: 'organizacion',
-              as: 'alcaldeProv'
-            }
-          },
-          {
-            $unwind: '$alcaldeProv'
-          },
-          {
-            $match: {
-              'alcaldeProv.tipo': 'provincial',
-              'alcaldeProv.departamento': new mongoose.Types.ObjectId(query.departamento as string),
-              'alcaldeProv.provincia': new mongoose.Types.ObjectId(query.provincia as string),
-              'alcaldeProv.estado': true
-            }
-          },
-          {
-            $project: {
-              orden: 1,
-              nombre: 1,
-              logo: 1,
-              votos_alc_prov: '$votos.votos_alc_prov',
-              votos_alc_dist: '$votos.votos_alc_dist',
-              alcaldeProv: {
-                _id: 1,
-                nombres: 1,
-                apellidos: 1,
-                dni: 1,
-                foto: 1
+    // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
+    const list = await Organizacion.aggregate([
+      {
+        $match: { anho, estado: true }
+      },
+      {
+        $lookup: {
+          from: Voto.collection.name,
+          localField: '_id',
+          foreignField: 'organizacion',
+          as: 'votos'
+        }
+      },
+      {
+        $unwind: '$votos'
+      },
+      {
+        $match: {
+          'votos.mesa': new mongoose.Types.ObjectId(id),
+          'votos.departamento': new mongoose.Types.ObjectId(query.departamento as string),
+          'votos.anho': anho,
+          'votos.tipo': ETipoVoto.Partido
+        }
+      },
+      {
+        $lookup: {
+          from: Alcalde.collection.name,
+          localField: '_id',
+          foreignField: 'organizacion',
+          as: 'alcaldeProv'
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          votos_alc_prov: '$votos.votos_alc_prov',
+          votos_alc_dist: '$votos.votos_alc_dist',
+          alcaldeProv: {
+            $filter: {
+              input: '$alcaldeProv',
+              as: 'alcalde',
+              cond: {
+                $and: [
+                  {
+                    $eq: ['$$alcalde.tipo', 'provincial']
+                  },
+                  {
+                    $eq: [
+                      '$$alcalde.departamento',
+                      new mongoose.Types.ObjectId(query.departamento as string)
+                    ]
+                  },
+                  {
+                    $eq: [
+                      '$$alcalde.provincia',
+                      new mongoose.Types.ObjectId(query.provincia as string)
+                    ]
+                  },
+                  { $eq: ['$$alcalde.estado', true] }
+                ]
               }
             }
-          },
-          {
-            $sort: { orden: 1 }
           }
-        ])
-
-        const nulos = await Voto.findOne(
-          {
-            mesa: id,
-            departamento: new mongoose.Types.ObjectId(query.departamento as string),
-            anho,
-            tipo: ETipoVoto.Nulo
-          },
-          '-_id votos_alc_prov votos_alc_dist'
-        )
-        const blancos = await Voto.findOne(
-          {
-            mesa: id,
-            departamento: new mongoose.Types.ObjectId(query.departamento as string),
-            anho,
-            tipo: ETipoVoto.Blanco
-          },
-          '-_id votos_alc_prov votos_alc_dist'
-        )
-        const impugnados = await Voto.findOne(
-          {
-            mesa: id,
-            departamento: new mongoose.Types.ObjectId(query.departamento as string),
-            anho,
-            tipo: ETipoVoto.Impugnado
-          },
-          '-_id votos_alc_prov votos_alc_dist'
-        )
-
-        // Retornamos la lista de votos
-        return res.json({
-          status: true,
-          list,
-          nulos,
-          blancos,
-          impugnados
-        })
-      } else {
-        // Intentamos realizar la búsqueda de todos los alcaldes provinciales y distritales
-        const list = await Organizacion.aggregate([
-          {
-            $match: { anho, estado: true }
-          },
-          {
-            $lookup: {
-              from: Voto.collection.name,
-              localField: '_id',
-              foreignField: 'organizacion',
-              as: 'votos'
-            }
-          },
-          {
-            $unwind: '$votos'
-          },
-          {
-            $match: {
-              'votos.mesa': new mongoose.Types.ObjectId(id),
-              'votos.departamento': new mongoose.Types.ObjectId(query.departamento as string),
-              'votos.anho': anho,
-              'votos.tipo': ETipoVoto.Partido
-            }
-          },
-          {
-            $lookup: {
-              from: Alcalde.collection.name,
-              localField: '_id',
-              foreignField: 'organizacion',
-              as: 'alcaldeProv'
-            }
-          },
-          {
-            $unwind: '$alcaldeProv'
-          },
-          {
-            $match: {
-              'alcaldeProv.tipo': 'provincial',
-              'alcaldeProv.departamento': new mongoose.Types.ObjectId(query.departamento as string),
-              'alcaldeProv.provincia': new mongoose.Types.ObjectId(query.provincia as string),
-              'alcaldeProv.estado': true
-            }
-          },
-          {
-            $lookup: {
-              from: Alcalde.collection.name,
-              localField: '_id',
-              foreignField: 'organizacion',
-              as: 'alcaldeDist'
-            }
-          },
-          {
-            $unwind: '$alcaldeDist'
-          },
-          {
-            $match: {
-              'alcaldeDist.tipo': 'distrital',
-              'alcaldeDist.departamento': new mongoose.Types.ObjectId(query.departamento as string),
-              'alcaldeDist.provincia': new mongoose.Types.ObjectId(query.provincia as string),
-              'alcaldeDist.distrito': new mongoose.Types.ObjectId(query.distrito as string),
-              'alcaldeDist.estado': true
-            }
-          },
-          {
-            $project: {
-              orden: 1,
-              nombre: 1,
-              logo: 1,
-              votos_alc_prov: '$votos.votos_alc_prov',
-              votos_alc_dist: '$votos.votos_alc_dist',
-              alcaldeProv: {
-                _id: 1,
-                nombres: 1,
-                apellidos: 1,
-                dni: 1,
-                foto: 1
-              },
-              alcaldeDist: {
-                _id: 1,
-                nombres: 1,
-                apellidos: 1,
-                dni: 1,
-                foto: 1,
-                distrito: 1
+        }
+      },
+      {
+        $lookup: {
+          from: Alcalde.collection.name,
+          localField: '_id',
+          foreignField: 'organizacion',
+          as: 'alcaldeDist'
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          votos_alc_prov: 1,
+          votos_alc_dist: 1,
+          alcaldeProv: 1,
+          alcaldeDist: {
+            $filter: {
+              input: '$alcaldeDist',
+              as: 'alcalde',
+              cond: {
+                $and: [
+                  {
+                    $eq: ['$$alcalde.tipo', 'distrital']
+                  },
+                  {
+                    $eq: [
+                      '$$alcalde.departamento',
+                      new mongoose.Types.ObjectId(query.departamento as string)
+                    ]
+                  },
+                  {
+                    $eq: [
+                      '$$alcalde.provincia',
+                      new mongoose.Types.ObjectId(query.provincia as string)
+                    ]
+                  },
+                  {
+                    $eq: [
+                      '$$alcalde.distrito',
+                      new mongoose.Types.ObjectId(query.distrito as string)
+                    ]
+                  },
+                  { $eq: ['$$alcalde.estado', true] }
+                ]
               }
             }
-          },
-          {
-            $sort: { orden: 1 }
           }
-        ])
-
-        const nulos = await Voto.findOne(
-          {
-            mesa: id,
-            departamento: new mongoose.Types.ObjectId(query.departamento as string),
-            anho,
-            tipo: ETipoVoto.Nulo
-          },
-          '-_id votos_alc_prov votos_alc_dist'
-        )
-        const blancos = await Voto.findOne(
-          {
-            mesa: id,
-            departamento: new mongoose.Types.ObjectId(query.departamento as string),
-            anho,
-            tipo: ETipoVoto.Blanco
-          },
-          '-_id votos_alc_prov votos_alc_dist'
-        )
-        const impugnados = await Voto.findOne(
-          {
-            mesa: id,
-            departamento: new mongoose.Types.ObjectId(query.departamento as string),
-            anho,
-            tipo: ETipoVoto.Impugnado
-          },
-          '-_id votos_alc_prov votos_alc_dist'
-        )
-
-        // Retornamos la lista de votos
-        return res.json({
-          status: true,
-          list,
-          nulos,
-          blancos,
-          impugnados
-        })
+        }
+      },
+      {
+        $project: {
+          orden: 1,
+          nombre: 1,
+          logo: 1,
+          votos_alc_prov: 1,
+          votos_alc_dist: 1,
+          alcaldeProv: 1,
+          alcaldeDist: {
+            _id: 1,
+            nombres: 1,
+            apellidos: 1,
+            dni: 1,
+            foto: 1
+          }
+        }
+      },
+      {
+        $match: {
+          $or: [{ 'alcaldeProv.0': { $exists: true } }, { 'alcaldeDist.0': { $exists: true } }]
+        }
+      },
+      {
+        $sort: { orden: 1 }
       }
-    }
+    ])
+
+    const nulos = await Voto.findOne(
+      {
+        mesa: id,
+        departamento: new mongoose.Types.ObjectId(query.departamento as string),
+        anho,
+        tipo: ETipoVoto.Nulo
+      },
+      '-_id votos_alc_prov votos_alc_dist'
+    )
+    const blancos = await Voto.findOne(
+      {
+        mesa: id,
+        departamento: new mongoose.Types.ObjectId(query.departamento as string),
+        anho,
+        tipo: ETipoVoto.Blanco
+      },
+      '-_id votos_alc_prov votos_alc_dist'
+    )
+    const impugnados = await Voto.findOne(
+      {
+        mesa: id,
+        departamento: new mongoose.Types.ObjectId(query.departamento as string),
+        anho,
+        tipo: ETipoVoto.Impugnado
+      },
+      '-_id votos_alc_prov votos_alc_dist'
+    )
+
+    // Retornamos la lista de votos
+    return res.json({
+      status: true,
+      list,
+      nulos,
+      blancos,
+      impugnados
+    })
   } catch (error) {
     // Mostramos el error en consola
     console.log('App Mesa', 'Obteniendo votos provinciales y distritales de la mesa', error)
