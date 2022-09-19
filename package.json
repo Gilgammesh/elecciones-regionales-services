@@ -37,7 +37,7 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
-    "mongoose": "^6.0.5",
+    "mongoose": "^6.4.6",
     "mongoose-unique-validator": "^2.0.3",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.1",
