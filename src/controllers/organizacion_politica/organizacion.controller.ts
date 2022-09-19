@@ -77,16 +77,9 @@ export const getAll: Handler = async (req, res) => {
     }
     const page = validatePage.page as number
 
-    let sort: {
-      [key: string]: string
-    } = { orden: 'asc' }
-    if (query.sort) {
-      sort = { [query.sort as string]: 'asc' }
-    }
-
     // Intentamos realizar la búsqueda de todas las organizaciones politicas paginadas
     const list: Array<IOrganizacion> = await Organizacion.find(queryOrganizaciones, exclude_campos)
-      .sort(sort)
+      .sort(query.sort ? { [query.sort as string]: 'asc' } : { orden: 'asc' })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
 
