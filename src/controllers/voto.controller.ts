@@ -262,7 +262,6 @@ export const regional: Handler = async (req, res) => {
           }
         }
       },
-
       {
         $project: {
           orden: 1,

@@ -12,15 +12,6 @@ import Voto from '../models/voto'
 import { getPage, getPageSize, getTotalPages } from '../helpers/pagination'
 
 /*******************************************************************************************************/
-// Enums e Interfaces del Componente //
-/*******************************************************************************************************/
-enum EMesaEstadoActa {
-  Enviado = 'enviado',
-  PorEnviar = 'por enviar',
-  Reabierto = 'reabierto'
-}
-
-/*******************************************************************************************************/
 // Variables generales del Controlador //
 /*******************************************************************************************************/
 const exclude_campos = '-createdAt -updatedAt'
@@ -128,28 +119,28 @@ export const get: Handler = async (req, res) => {
     // Total de actas regionales
     const totalActasRegEnviadas: number = await Mesa.find({
       ...queryActas,
-      acta_reg: EMesaEstadoActa.Enviado
+      acta_reg: EActaEstadoMesa.Enviado
     }).count()
     const totalActasRegPorenviar: number = await Mesa.find({
       ...queryActas,
-      acta_reg: EMesaEstadoActa.PorEnviar
+      acta_reg: EActaEstadoMesa.PorEnviar
     }).count()
     const totalActasRegReabiertas: number = await Mesa.find({
       ...queryActas,
-      acta_reg: EMesaEstadoActa.Reabierto
+      acta_reg: EActaEstadoMesa.Reabierto
     }).count()
     // Total de actas provinciales
     const totalActasProvEnviadas: number = await Mesa.find({
       ...queryActas,
-      acta_prov: EMesaEstadoActa.Enviado
+      acta_prov: EActaEstadoMesa.Enviado
     }).count()
     const totalActasProvPorenviar: number = await Mesa.find({
       ...queryActas,
-      acta_prov: EMesaEstadoActa.PorEnviar
+      acta_prov: EActaEstadoMesa.PorEnviar
     }).count()
     const totalActasProvReabiertas: number = await Mesa.find({
       ...queryActas,
-      acta_prov: EMesaEstadoActa.Reabierto
+      acta_prov: EActaEstadoMesa.Reabierto
     }).count()
 
     // Obtenemos el número de registros por página y hacemos las validaciones

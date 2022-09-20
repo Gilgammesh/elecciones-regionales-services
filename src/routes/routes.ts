@@ -9,6 +9,7 @@ import eleccionesRoutes from './elecciones.routes'
 import centrosVotacionRoutes from './centros_votacion.routes'
 import organizacionesPoliticasRoutes from './organizaciones_politicas.routes'
 import monitoreoRoutes from './monitoreo.routes'
+import reportesRoutes from './reportes.routes'
 import ubigeoRoutes from './ubigeo.routes'
 import appRoutes from './app.routes'
 
@@ -56,10 +57,10 @@ const routes: Array<IRoutes> = [
     path: '/monitoreo',
     router: monitoreoRoutes
   },
-  /* {
-		path: '/reportes',
-		router: ,
-	} */
+  {
+    path: '/reportes',
+    router: reportesRoutes
+  },
   {
     path: '/app',
     router: appRoutes
